@@ -35,7 +35,7 @@
                 </DoubleAnimation.EasingFunction>
             </DoubleAnimation>
             <DoubleAnimation Storyboard.TargetName="Island" Storyboard.TargetProperty="Height"
-                             To="160" Duration="0:0:0.55">
+                             To="180" Duration="0:0:0.55">
                 <DoubleAnimation.EasingFunction>
                     <BackEase EasingMode="EaseOut" Amplitude="0.28" />
                 </DoubleAnimation.EasingFunction>
@@ -70,7 +70,7 @@
                              Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)"
                              To="0" BeginTime="0:0:0.12" Duration="0:0:0.6">
                 <DoubleAnimation.EasingFunction>
-                    <BackEase EasingMode="EaseOut" Amplitude="0.35" />
+                    <CubicEase EasingMode="EaseOut" />
                 </DoubleAnimation.EasingFunction>
             </DoubleAnimation>
         </Storyboard>
@@ -106,7 +106,7 @@
                              To="0.9" Duration="0:0:0.2" />
             <DoubleAnimation Storyboard.TargetName="DiscHost"
                              Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)"
-                             To="-100" Duration="0:0:0.25" />
+                             To="-115" Duration="0:0:0.25" />
             <DoubleAnimation Storyboard.TargetName="CompactContent" Storyboard.TargetProperty="Opacity"
                              To="1" BeginTime="0:0:0.22" Duration="0:0:0.2" />
         </Storyboard>
@@ -191,7 +191,7 @@
 
                     <!-- ===== Expandido ===== -->
                     <Grid x:Name="ExpandedContent"
-                          Height="160" VerticalAlignment="Top"
+                          Height="180" VerticalAlignment="Top"
                           Opacity="0"
                           IsHitTestVisible="{Binding IsExpanded}"
                           RenderTransformOrigin="0.5,0">
@@ -202,9 +202,9 @@
                         <!-- Vinilo: a la mitad en el top -->
                         <Grid x:Name="DiscHost" Width="150" Height="150"
                               HorizontalAlignment="Center" VerticalAlignment="Top"
-                              Margin="0,-100,0,0" IsHitTestVisible="False">
+                              Margin="0,-115,0,0" IsHitTestVisible="False">
                             <Grid.RenderTransform>
-                                <TranslateTransform Y="-100" />
+                                <TranslateTransform Y="-115" />
                             </Grid.RenderTransform>
 
                             <Grid RenderTransformOrigin="0.5,0.5">
@@ -242,7 +242,7 @@
                             <Ellipse Stroke="#26FFFFFF" StrokeThickness="1" />
                         </Grid>
 
-                        <StackPanel Margin="16,52,16,6" VerticalAlignment="Center">
+                        <StackPanel Margin="16,0,16,10" VerticalAlignment="Bottom">
                             <!-- Title & Artist -->
                             <TextBlock Text="{Binding Title}"
                                        Foreground="{StaticResource TextPrimaryBrush}"
@@ -284,9 +284,11 @@
                                     </ProgressBar.Background>
                                     <ProgressBar.Template>
                                         <ControlTemplate TargetType="ProgressBar">
-                                            <Grid>
+                                            <Grid x:Name="TemplateRoot">
                                                 <Border Background="{TemplateBinding Background}" CornerRadius="1.5" />
-                                                <Border x:Name="PART_Indicator" Background="{TemplateBinding Foreground}" CornerRadius="1.5" HorizontalAlignment="Left" />
+                                                <Border x:Name="PART_Track">
+                                                    <Border x:Name="PART_Indicator" Background="{TemplateBinding Foreground}" CornerRadius="1.5" HorizontalAlignment="Left" />
+                                                </Border>
                                             </Grid>
                                         </ControlTemplate>
                                     </ProgressBar.Template>
