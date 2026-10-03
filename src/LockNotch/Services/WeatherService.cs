@@ -13,7 +13,7 @@ public sealed class WeatherService : IWeatherService, IDisposable
     private double? _lon;
 
     private string _temperature = "--°c";
-    private string _conditionGlyph = "☀️"; // Soleado por defecto
+    private string _conditionGlyph = "\xE706"; // Soleado por defecto
 
     public event EventHandler? WeatherChanged;
 
@@ -67,20 +67,20 @@ public sealed class WeatherService : IWeatherService, IDisposable
 
     private static string GetGlyphForCode(int code)
     {
-        // WMO Weather interpretation codes
+        // WMO Weather interpretation codes using Segoe Fluent Icons
         return code switch
         {
-            0 => "☀️", // Despejado (Sunny)
-            1 => "🌤️", // Poco nublado
-            2 or 3 => "☁️", // Nubes (Partly cloudy / overcast)
-            45 or 48 => "🌫️", // Niebla (Fog)
-            51 or 53 or 55 or 56 or 57 => "🌦️", // Llovizna (Drizzle)
-            61 or 63 or 65 or 66 or 67 => "🌧️", // Lluvia (Rain)
-            71 or 73 or 75 or 77 => "❄️", // Nieve (Snow)
-            80 or 81 or 82 => "🌧️", // Chubascos (Showers)
-            85 or 86 => "🌨️", // Chubascos de nieve (Snow showers)
-            95 or 96 or 99 => "⛈️", // Tormenta (Thunderstorm)
-            _ => "☀️"
+            0 => "\xE706", // Despejado (Sunny)
+            1 => "\xE706", // Poco nublado
+            2 or 3 => "\xE753", // Nubes (Partly cloudy / overcast)
+            45 or 48 => "\xE753", // Niebla (Fog)
+            51 or 53 or 55 or 56 or 57 => "\xE738", // Llovizna (Drizzle)
+            61 or 63 or 65 or 66 or 67 => "\xE738", // Lluvia (Rain)
+            71 or 73 or 75 or 77 => "\xE9C9", // Nieve (Snow)
+            80 or 81 or 82 => "\xE738", // Chubascos (Showers)
+            85 or 86 => "\xE9C9", // Chubascos de nieve (Snow showers)
+            95 or 96 or 99 => "\xE73A", // Tormenta (Thunderstorm)
+            _ => "\xE706"
         };
     }
 
