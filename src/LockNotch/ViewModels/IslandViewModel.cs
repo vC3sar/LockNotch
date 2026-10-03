@@ -25,6 +25,8 @@ public partial class IslandViewModel : ObservableObject, IDisposable
 
     private CancellationTokenSource? _collapseCts;
     private bool _isPointerOver;
+    private readonly System.Threading.Timer _progressTimer;
+    private MediaInfo? _currentMedia;
 
     public TimeSpan CollapseDelay { get; set; } = TimeSpan.FromMilliseconds(400);
 
@@ -73,6 +75,18 @@ public partial class IslandViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     private ImageSource? _thumbnail;
 
+    [ObservableProperty]
+    private double _progressPercentage;
+
+    [ObservableProperty]
+    private bool _hasProgress;
+
+    [ObservableProperty]
+    private string _positionText = "0:00";
+
+    [ObservableProperty]
+    private string _durationText = "0:00";
+
     public IslandState State =>
         IsHiddenForFullscreen ? IslandState.Hidden :
         IsExpanded ? IslandState.Expanded : IslandState.Compact;
@@ -93,6 +107,8 @@ public partial class IslandViewModel : ObservableObject, IDisposable
         _media.MediaChanged += OnMediaChanged;
         _battery.BatteryChanged += OnBatteryChanged;
         _weather.WeatherChanged += OnWeatherChanged;
+
+        _progressTimer = new System.Threading.Timer(OnProgressTick, null, Timeout.Infinite, Timeout.Infinite);
     }
 
     public async Task StartAsync()
@@ -192,8 +208,48 @@ public partial class IslandViewModel : ObservableObject, IDisposable
             Thumbnail = CreateBitmap(_thumbnailBytes);
         }
 
+        _currentMedia = media;
+        HasProgress = media?.EndTime > TimeSpan.Zero;
+        
+        if (HasProgress)
+        {
+            UpdateProgress();
+            if (IsPlaying)
+                _progressTimer.Change(500, 500);
+            else
+                _progressTimer.Change(Timeout.Infinite, Timeout.Infinite);
+        }
+        else
+        {
+            _progressTimer.Change(Timeout.Infinite, Timeout.Infinite);
+        }
+
         if (trackChanged) ExpandTemporarily(TrackChangeExpandDuration);
     }
+
+    private void OnProgressTick(object? state) => _ui.Post(_ => UpdateProgress(), null);
+
+    private void UpdateProgress()
+    {
+        var media = _currentMedia;
+        if (media is null || media.EndTime <= TimeSpan.Zero) return;
+
+        var position = media.Position;
+        if (media.IsPlaying)
+        {
+            position += DateTimeOffset.Now - media.LastUpdatedTime;
+        }
+
+        if (position > media.EndTime) position = media.EndTime;
+        if (position < TimeSpan.Zero) position = TimeSpan.Zero;
+
+        ProgressPercentage = position.TotalSeconds / media.EndTime.TotalSeconds * 100;
+        PositionText = FormatTimeSpan(position);
+        DurationText = FormatTimeSpan(media.EndTime);
+    }
+
+    private static string FormatTimeSpan(TimeSpan t) =>
+        t.TotalHours >= 1 ? $"{(int)t.TotalHours}:{t.Minutes:D2}:{t.Seconds:D2}" : $"{t.Minutes}:{t.Seconds:D2}";
 
     private static ImageSource? CreateBitmap(byte[]? bytes)
     {

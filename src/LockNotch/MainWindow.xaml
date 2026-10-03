@@ -106,7 +106,7 @@
                              To="0.9" Duration="0:0:0.2" />
             <DoubleAnimation Storyboard.TargetName="DiscHost"
                              Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)"
-                             To="-80" Duration="0:0:0.25" />
+                             To="-100" Duration="0:0:0.25" />
             <DoubleAnimation Storyboard.TargetName="CompactContent" Storyboard.TargetProperty="Opacity"
                              To="1" BeginTime="0:0:0.22" Duration="0:0:0.2" />
         </Storyboard>
@@ -200,11 +200,11 @@
                         </Grid.RenderTransform>
 
                         <!-- Vinilo: a la mitad en el top -->
-                        <Grid x:Name="DiscHost" Width="160" Height="160"
+                        <Grid x:Name="DiscHost" Width="150" Height="150"
                               HorizontalAlignment="Center" VerticalAlignment="Top"
-                              Margin="0,-80,0,0" IsHitTestVisible="False">
+                              Margin="0,-100,0,0" IsHitTestVisible="False">
                             <Grid.RenderTransform>
-                                <TranslateTransform Y="-80" />
+                                <TranslateTransform Y="-100" />
                             </Grid.RenderTransform>
 
                             <Grid RenderTransformOrigin="0.5,0.5">
@@ -214,12 +214,12 @@
 
                                 <Ellipse Fill="{StaticResource VinylBrush}" />
                                 <!-- Surcos -->
-                                <Ellipse Width="150" Height="150" Stroke="#14FFFFFF" StrokeThickness="0.7" />
-                                <Ellipse Width="140" Height="140" Stroke="#0FFFFFFF" StrokeThickness="0.7" />
+                                <Ellipse Width="142" Height="142" Stroke="#14FFFFFF" StrokeThickness="0.7" />
+                                <Ellipse Width="134" Height="134" Stroke="#0FFFFFFF" StrokeThickness="0.7" />
 
                                 <!-- Etiqueta con la portada -->
-                                <Ellipse Width="140" Height="140" Fill="{StaticResource ArtPlaceholderBrush}" />
-                                <Ellipse Width="140" Height="140">
+                                <Ellipse Width="134" Height="134" Fill="{StaticResource ArtPlaceholderBrush}" />
+                                <Ellipse Width="134" Height="134">
                                     <Ellipse.Fill>
                                         <ImageBrush ImageSource="{Binding Thumbnail}" Stretch="UniformToFill" />
                                     </Ellipse.Fill>
@@ -233,7 +233,7 @@
                                         </Style>
                                     </Ellipse.Style>
                                 </Ellipse>
-                                <Ellipse Width="140" Height="140" Stroke="#33000000" StrokeThickness="2" />
+                                <Ellipse Width="134" Height="134" Stroke="#33000000" StrokeThickness="2" />
                                 <Ellipse Width="11" Height="11" Fill="#000000" Stroke="#40FFFFFF" StrokeThickness="1" />
                             </Grid>
 
@@ -242,33 +242,72 @@
                             <Ellipse Stroke="#26FFFFFF" StrokeThickness="1" />
                         </Grid>
 
-                        <Grid Margin="16,80,16,10">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
+                        <StackPanel Margin="16,52,16,6" VerticalAlignment="Center">
+                            <!-- Title & Artist -->
+                            <TextBlock Text="{Binding Title}"
+                                       Foreground="{StaticResource TextPrimaryBrush}"
+                                       FontSize="15" FontWeight="SemiBold"
+                                       TextTrimming="CharacterEllipsis" TextAlignment="Center" />
+                            <TextBlock Text="{Binding Artist}"
+                                       Foreground="{StaticResource TextSecondaryBrush}"
+                                       FontSize="13" Margin="0,2,0,0"
+                                       TextTrimming="CharacterEllipsis" TextAlignment="Center" />
 
-                            <StackPanel VerticalAlignment="Center" Margin="0,0,10,0">
-                                <TextBlock Text="{Binding Title}"
-                                           Foreground="{StaticResource TextPrimaryBrush}"
-                                           FontSize="15" FontWeight="SemiBold"
-                                           TextTrimming="CharacterEllipsis" TextAlignment="Left" />
-                                <TextBlock Text="{Binding Artist}"
-                                           Foreground="{StaticResource TextSecondaryBrush}"
-                                           FontSize="13" Margin="0,2,0,0"
-                                           TextTrimming="CharacterEllipsis" TextAlignment="Left" />
-                            </StackPanel>
+                            <!-- Progress Bar & Times -->
+                            <Grid Margin="16,8,16,8">
+                                <Grid.Style>
+                                    <Style TargetType="Grid">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding HasProgress}" Value="False">
+                                                <Setter Property="Visibility" Value="Collapsed" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Grid.Style>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
 
-                            <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                <TextBlock Grid.Column="0" Text="{Binding PositionText}" 
+                                           Foreground="{StaticResource TextTertiaryBrush}" 
+                                           FontSize="11" Margin="0,0,8,0" VerticalAlignment="Center" />
+
+                                <ProgressBar Grid.Column="1" Value="{Binding ProgressPercentage}" 
+                                             Maximum="100" Height="3" BorderThickness="0" VerticalAlignment="Center">
+                                    <ProgressBar.Foreground>
+                                        <SolidColorBrush Color="#FFFFFFFF"/>
+                                    </ProgressBar.Foreground>
+                                    <ProgressBar.Background>
+                                        <SolidColorBrush Color="#33FFFFFF"/>
+                                    </ProgressBar.Background>
+                                    <ProgressBar.Template>
+                                        <ControlTemplate TargetType="ProgressBar">
+                                            <Grid>
+                                                <Border Background="{TemplateBinding Background}" CornerRadius="1.5" />
+                                                <Border x:Name="PART_Indicator" Background="{TemplateBinding Foreground}" CornerRadius="1.5" HorizontalAlignment="Left" />
+                                            </Grid>
+                                        </ControlTemplate>
+                                    </ProgressBar.Template>
+                                </ProgressBar>
+
+                                <TextBlock Grid.Column="2" Text="{Binding DurationText}" 
+                                           Foreground="{StaticResource TextTertiaryBrush}" 
+                                           FontSize="11" Margin="8,0,0,0" VerticalAlignment="Center" />
+                            </Grid>
+
+                            <!-- Controls -->
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                                 <Button Style="{StaticResource MediaButton}" Content="&#xE892;"
                                         Command="{Binding PreviousCommand}" ToolTip="Anterior" />
-                                <Button Style="{StaticResource PlayButton}" Margin="12,0"
+                                <Button Style="{StaticResource PlayButton}" Margin="16,0"
                                         Content="{Binding IsPlaying, Converter={StaticResource PlayPauseGlyph}}"
                                         Command="{Binding PlayPauseCommand}" ToolTip="Reproducir / Pausar" />
                                 <Button Style="{StaticResource MediaButton}" Content="&#xE893;"
                                         Command="{Binding NextCommand}" ToolTip="Siguiente" />
                             </StackPanel>
-                        </Grid>
+                        </StackPanel>
                     </Grid>
                 </Grid>
             </Border>

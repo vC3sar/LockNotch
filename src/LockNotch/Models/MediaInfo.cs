@@ -7,7 +7,10 @@ public sealed record MediaInfo(
     string AlbumTitle,
     bool IsPlaying,
     byte[]? Thumbnail,
-    string SourceAppId)
+    string SourceAppId,
+    TimeSpan Position,
+    TimeSpan EndTime,
+    DateTimeOffset LastUpdatedTime)
 {
     public string TrackKey => $"{SourceAppId}|{Title}|{Artist}";
 }

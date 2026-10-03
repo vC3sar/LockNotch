@@ -86,6 +86,7 @@ public sealed class MediaService : IMediaService, IDisposable
         {
             _session.MediaPropertiesChanged += OnMediaPropertiesChanged;
             _session.PlaybackInfoChanged += OnPlaybackInfoChanged;
+            _session.TimelinePropertiesChanged += OnTimelinePropertiesChanged;
         }
 
         await RefreshAsync();
@@ -95,6 +96,9 @@ public sealed class MediaService : IMediaService, IDisposable
         await RefreshAsync();
 
     private async void OnPlaybackInfoChanged(GsmtcSession sender, PlaybackInfoChangedEventArgs args) =>
+        await RefreshAsync();
+
+    private async void OnTimelinePropertiesChanged(GsmtcSession sender, TimelinePropertiesChangedEventArgs args) =>
         await RefreshAsync();
 
     #endregion
@@ -132,13 +136,17 @@ public sealed class MediaService : IMediaService, IDisposable
                 return;
             }
 
+            var timeline = session.GetTimelineProperties();
             var info = new MediaInfo(
                 title,
                 artist,
                 props?.AlbumTitle ?? string.Empty,
                 isPlaying,
                 null,
-                session.SourceAppUserModelId ?? string.Empty);
+                session.SourceAppUserModelId ?? string.Empty,
+                timeline?.Position ?? TimeSpan.Zero,
+                timeline?.EndTime ?? TimeSpan.Zero,
+                timeline?.LastUpdatedTime ?? DateTimeOffset.Now);
 
             info = info with { Thumbnail = await GetThumbnailAsync(info.TrackKey, props?.Thumbnail) };
             Publish(info);
@@ -223,6 +231,7 @@ public sealed class MediaService : IMediaService, IDisposable
         {
             _session.MediaPropertiesChanged -= OnMediaPropertiesChanged;
             _session.PlaybackInfoChanged -= OnPlaybackInfoChanged;
+            _session.TimelinePropertiesChanged -= OnTimelinePropertiesChanged;
         }
         _refreshLock.Dispose();
     }
