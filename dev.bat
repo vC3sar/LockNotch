@@ -1,6 +1,17 @@
 @echo off
 title LockNotch Dev Manager
 
+:: Solicitar elevacion a Administrador si no se tiene
+net session >nul 2>&1
+if %errorLevel% neq 0 (
+    echo Solicitando privilegios de administrador...
+    powershell -Command "Start-Process -FilePath '%0' -Verb RunAs"
+    exit /b
+)
+
+:: Asegurar que el directorio de trabajo sea la carpeta del script (soluciona error de ruta en modo admin)
+cd /d "%~dp0"
+
 :loop
 cls
 echo ====================================

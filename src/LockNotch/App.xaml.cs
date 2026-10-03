@@ -12,6 +12,9 @@ public partial class App : System.Windows.Application
     private MediaService? _media;
     private BatteryService? _battery;
     private WeatherService? _weather;
+    private UsbService? _usb;
+    private VolumeService? _volume;
+    private HardwareService? _hardware;
     private IslandViewModel? _viewModel;
 
     protected override async void OnStartup(StartupEventArgs e)
@@ -31,7 +34,10 @@ public partial class App : System.Windows.Application
         _media = new MediaService();
         _battery = new BatteryService();
         _weather = new WeatherService();
-        _viewModel = new IslandViewModel(_clock, _fullscreen, _media, _battery, _weather);
+        _usb = new UsbService();
+        _volume = new VolumeService();
+        _hardware = new HardwareService();
+        _viewModel = new IslandViewModel(_clock, _fullscreen, _media, _battery, _weather, _usb, _volume, _hardware);
 
         var window = new MainWindow(_viewModel);
         MainWindow = window;
@@ -48,6 +54,9 @@ public partial class App : System.Windows.Application
         _media?.Dispose();
         _battery?.Dispose();
         _weather?.Dispose();
+        _usb?.Dispose();
+        _volume?.Dispose();
+        _hardware?.Dispose();
         _singleInstance?.Dispose();
         base.OnExit(e);
     }

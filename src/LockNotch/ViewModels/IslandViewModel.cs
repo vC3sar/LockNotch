@@ -19,6 +19,9 @@ public partial class IslandViewModel : ObservableObject, IDisposable
     private readonly IMediaService _media;
     private readonly IBatteryService _battery;
     private readonly IWeatherService _weather;
+    private readonly IUsbService _usb;
+    private readonly IVolumeService _volume;
+    private readonly IHardwareService _hardware;
     private readonly SynchronizationContext _ui;
 
     private byte[]? _thumbnailBytes;
@@ -57,6 +60,16 @@ public partial class IslandViewModel : ObservableObject, IDisposable
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(State))]
+    private bool _isNotifying;
+
+    [ObservableProperty]
+    private NotificationRequest? _currentNotification;
+
+    private readonly Queue<NotificationRequest> _notificationQueue = new();
+    private CancellationTokenSource? _notificationCts;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(State))]
     private bool _isHiddenForFullscreen;
 
     [ObservableProperty]
@@ -87,26 +100,42 @@ public partial class IslandViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     private string _durationText = "0:00";
 
+    [ObservableProperty]
+    private string _cpuTemp = "--°";
+
+    [ObservableProperty]
+    private string _gpuTemp = "--°";
+
+    [ObservableProperty]
+    private bool _showHardwarePanel;
+
     public IslandState State =>
         IsHiddenForFullscreen ? IslandState.Hidden :
+        IsNotifying ? IslandState.Notification :
         IsExpanded ? IslandState.Expanded : IslandState.Compact;
 
-    public IslandViewModel(IClockService clock, IFullscreenService fullscreen, IMediaService media, IBatteryService battery, IWeatherService weather)
+    public IslandViewModel(IClockService clock, IFullscreenService fullscreen, IMediaService media, IBatteryService battery, IWeatherService weather, IUsbService usb, IVolumeService volume, IHardwareService hardware)
     {
         _clock = clock;
         _fullscreen = fullscreen;
         _media = media;
         _battery = battery;
         _weather = weather;
+        _usb = usb;
+        _volume = volume;
+        _hardware = hardware;
         _ui = SynchronizationContext.Current ?? new SynchronizationContext();
 
-        TimeText = _clock.Now.ToString("HH:mm");
+        TimeText = _clock.Now.ToString("h:mm tt");
 
         _clock.MinuteChanged += OnMinuteChanged;
         _fullscreen.FullscreenChanged += OnFullscreenChanged;
         _media.MediaChanged += OnMediaChanged;
         _battery.BatteryChanged += OnBatteryChanged;
         _weather.WeatherChanged += OnWeatherChanged;
+        _usb.UsbDeviceChanged += OnUsbDeviceChanged;
+        _volume.VolumeChanged += OnVolumeChanged;
+        _hardware.HardwareChanged += OnHardwareChanged;
 
         _progressTimer = new System.Threading.Timer(OnProgressTick, null, Timeout.Infinite, Timeout.Infinite);
     }
@@ -117,6 +146,9 @@ public partial class IslandViewModel : ObservableObject, IDisposable
         _fullscreen.Start();
         _battery.Start();
         _weather.Start();
+        _usb.Start();
+        _volume.Start();
+        _hardware.Start();
         await _media.InitializeAsync();
     }
 
@@ -172,6 +204,49 @@ public partial class IslandViewModel : ObservableObject, IDisposable
         _collapseCts?.Cancel();
         _collapseCts?.Dispose();
         _collapseCts = null;
+    }
+
+    #endregion
+
+    #region Notifications
+
+    public void EnqueueNotification(NotificationRequest req)
+    {
+        _ui.Post(_ =>
+        {
+            _notificationQueue.Enqueue(req);
+            if (!IsNotifying) ProcessNextNotification();
+        }, null);
+    }
+
+    private async void ProcessNextNotification()
+    {
+        if (_notificationQueue.Count == 0)
+        {
+            IsNotifying = false;
+            return;
+        }
+
+        var req = _notificationQueue.Dequeue();
+        CurrentNotification = req;
+        IsNotifying = true;
+
+        _notificationCts?.Cancel();
+        _notificationCts?.Dispose();
+        _notificationCts = new CancellationTokenSource();
+        var token = _notificationCts.Token;
+
+        try
+        {
+            await Task.Delay(req.Duration, token);
+            if (!token.IsCancellationRequested)
+            {
+                IsNotifying = false;
+                await Task.Delay(200, token); // Small gap for collapse animation
+                if (!token.IsCancellationRequested) ProcessNextNotification();
+            }
+        }
+        catch (TaskCanceledException) { }
     }
 
     #endregion
@@ -274,7 +349,7 @@ public partial class IslandViewModel : ObservableObject, IDisposable
     #endregion
 
     private void OnMinuteChanged(object? sender, DateTime now) =>
-        _ui.Post(_ => TimeText = now.ToString("HH:mm"), null);
+        _ui.Post(_ => TimeText = now.ToString("h:mm tt"), null);
 
     private void OnFullscreenChanged(object? sender, bool isFullscreen) =>
         _ui.Post(_ =>
@@ -286,6 +361,8 @@ public partial class IslandViewModel : ObservableObject, IDisposable
             }
             IsHiddenForFullscreen = isFullscreen;
         }, null);
+
+    private bool? _wasCharging;
 
     private void OnBatteryChanged(object? sender, EventArgs e) =>
         _ui.Post(_ =>
@@ -299,7 +376,7 @@ public partial class IslandViewModel : ObservableObject, IDisposable
             
             if (charging) BatteryGlyph = "\xE83E"; // Batería cargando
             else if (charge >= 95) BatteryGlyph = "\xE83F";
-            else if (charge >= 80) BatteryGlyph = "\xE850"; // Batería 8 - aprox 80% (o similar, pero vamos a dejar el E83F para todas, o E850-E859 según la fuente Fluent Icons). Fluent Icons tiene de E850 a E859 para la carga de 0 a 10.
+            else if (charge >= 80) BatteryGlyph = "\xE850";
             else if (charge >= 70) BatteryGlyph = "\xE858";
             else if (charge >= 60) BatteryGlyph = "\xE857";
             else if (charge >= 50) BatteryGlyph = "\xE856";
@@ -308,6 +385,14 @@ public partial class IslandViewModel : ObservableObject, IDisposable
             else if (charge >= 20) BatteryGlyph = "\xE853";
             else if (charge >= 10) BatteryGlyph = "\xE852";
             else BatteryGlyph = "\xE850"; // Batería baja
+
+            if (_wasCharging.HasValue && _wasCharging.Value != charging)
+            {
+                var brush = (System.Windows.Media.Brush)System.Windows.Application.Current.Resources[charging ? "AccentBrush" : "TextPrimaryBrush"];
+                var text = charging ? $"Cargando: {BatteryText}" : "Batería en uso";
+                EnqueueNotification(new NotificationRequest(BatteryGlyph, text, brush, TimeSpan.FromSeconds(2.5)));
+            }
+            _wasCharging = charging;
 
         }, null);
 
@@ -318,6 +403,30 @@ public partial class IslandViewModel : ObservableObject, IDisposable
             WeatherGlyph = _weather.ConditionGlyph;
         }, null);
 
+    private void OnUsbDeviceChanged(object? sender, bool connected) =>
+        _ui.Post(_ =>
+        {
+            var brush = (System.Windows.Media.Brush)System.Windows.Application.Current.Resources[connected ? "AccentBrush" : "TextSecondaryBrush"];
+            var text = connected ? "Dispositivo USB conectado" : "Dispositivo USB desconectado";
+            EnqueueNotification(new NotificationRequest("\xE88E", text, brush, TimeSpan.FromSeconds(2.5)));
+        }, null);
+
+    private void OnVolumeChanged(object? sender, VolumeChangedEventArgs e) =>
+        _ui.Post(_ =>
+        {
+            var brush = (System.Windows.Media.Brush)System.Windows.Application.Current.Resources[e.IsMuted ? "DangerBrush" : "TextPrimaryBrush"];
+            var glyph = e.IsMuted ? "\xE74F" : (e.VolumePercent >= 50 ? "\xE995" : "\xE993");
+            var text = e.IsMuted ? "Silenciado" : $"Volumen: {Math.Round(e.VolumePercent)}%";
+            EnqueueNotification(new NotificationRequest(glyph, text, brush, TimeSpan.FromSeconds(2)));
+        }, null);
+
+    private void OnHardwareChanged(object? sender, HardwareChangedEventArgs e) =>
+        _ui.Post(_ =>
+        {
+            CpuTemp = e.CpuTemp;
+            GpuTemp = e.GpuTemp;
+        }, null);
+
     public void Dispose()
     {
         _clock.MinuteChanged -= OnMinuteChanged;
@@ -325,6 +434,11 @@ public partial class IslandViewModel : ObservableObject, IDisposable
         _media.MediaChanged -= OnMediaChanged;
         _battery.BatteryChanged -= OnBatteryChanged;
         _weather.WeatherChanged -= OnWeatherChanged;
+        _usb.UsbDeviceChanged -= OnUsbDeviceChanged;
+        _volume.VolumeChanged -= OnVolumeChanged;
+        _hardware.HardwareChanged -= OnHardwareChanged;
         CancelPendingCollapse();
+        _notificationCts?.Dispose();
+        _progressTimer?.Dispose();
     }
 }

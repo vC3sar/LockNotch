@@ -5,6 +5,7 @@ using System.Windows.Interop;
 using System.Windows.Media.Animation;
 using System.Windows.Threading;
 using LockNotch.Interop;
+using LockNotch.Models;
 using LockNotch.ViewModels;
 
 namespace LockNotch;
@@ -14,6 +15,7 @@ public partial class MainWindow : Window
     private readonly IslandViewModel _vm;
     private readonly Storyboard _expand;
     private readonly Storyboard _collapse;
+    private readonly Storyboard _notify;
     private readonly Storyboard _discSpin;
     private bool _discSpinStarted;
     private IntPtr _hwnd;
@@ -26,6 +28,7 @@ public partial class MainWindow : Window
         DataContext = viewModel;
         _expand = (Storyboard)FindResource("ExpandStoryboard");
         _collapse = (Storyboard)FindResource("CollapseStoryboard");
+        _notify = (Storyboard)FindResource("NotifyStoryboard");
 
         var spinAnim = new DoubleAnimation(0, 360, TimeSpan.FromSeconds(6.7)) { RepeatBehavior = RepeatBehavior.Forever };
         Storyboard.SetTargetName(spinAnim, "DiscRotation");
@@ -69,8 +72,13 @@ public partial class MainWindow : Window
     {
         switch (e.PropertyName)
         {
-            case nameof(IslandViewModel.IsExpanded):
-                var sb = _vm.IsExpanded ? _expand : _collapse;
+            case nameof(IslandViewModel.State):
+                Storyboard sb = _vm.State switch
+                {
+                    IslandState.Expanded => _expand,
+                    IslandState.Notification => _notify,
+                    _ => _collapse
+                };
                 sb.Begin(this, HandoffBehavior.SnapshotAndReplace);
                 break;
 

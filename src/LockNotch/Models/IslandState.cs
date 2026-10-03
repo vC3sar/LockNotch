@@ -4,5 +4,6 @@ public enum IslandState
 {
     Compact,
     Expanded,
-    Hidden
+    Hidden,
+    Notification
 }

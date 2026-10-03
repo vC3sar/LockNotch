@@ -35,7 +35,7 @@
                 </DoubleAnimation.EasingFunction>
             </DoubleAnimation>
             <DoubleAnimation Storyboard.TargetName="Island" Storyboard.TargetProperty="Height"
-                             To="180" Duration="0:0:0.55">
+                             To="170" Duration="0:0:0.55">
                 <DoubleAnimation.EasingFunction>
                     <BackEase EasingMode="EaseOut" Amplitude="0.28" />
                 </DoubleAnimation.EasingFunction>
@@ -48,6 +48,8 @@
                 </DoubleAnimation.EasingFunction>
             </DoubleAnimation>
             <DoubleAnimation Storyboard.TargetName="CompactContent" Storyboard.TargetProperty="Opacity"
+                             To="0" Duration="0:0:0.12" />
+            <DoubleAnimation Storyboard.TargetName="NotificationContent" Storyboard.TargetProperty="Opacity"
                              To="0" Duration="0:0:0.12" />
             <DoubleAnimation Storyboard.TargetName="ExpandedContent" Storyboard.TargetProperty="Opacity"
                              To="1" BeginTime="0:0:0.15" Duration="0:0:0.3" />
@@ -109,6 +111,36 @@
                              To="-115" Duration="0:0:0.25" />
             <DoubleAnimation Storyboard.TargetName="CompactContent" Storyboard.TargetProperty="Opacity"
                              To="1" BeginTime="0:0:0.22" Duration="0:0:0.2" />
+            <DoubleAnimation Storyboard.TargetName="NotificationContent" Storyboard.TargetProperty="Opacity"
+                             To="0" Duration="0:0:0.12" />
+        </Storyboard>
+
+        <Storyboard x:Key="NotifyStoryboard">
+            <DoubleAnimation Storyboard.TargetName="Island" Storyboard.TargetProperty="Width"
+                             To="280" Duration="0:0:0.3">
+                <DoubleAnimation.EasingFunction>
+                    <CubicEase EasingMode="EaseOut" />
+                </DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+            <DoubleAnimation Storyboard.TargetName="Island" Storyboard.TargetProperty="Height"
+                             To="38" Duration="0:0:0.3">
+                <DoubleAnimation.EasingFunction>
+                    <CubicEase EasingMode="EaseOut" />
+                </DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+            <DoubleAnimation Storyboard.TargetName="IslandBorder"
+                             Storyboard.TargetProperty="(helpers:NotchHelper.BottomRadius)"
+                             To="19" Duration="0:0:0.3">
+                <DoubleAnimation.EasingFunction>
+                    <CubicEase EasingMode="EaseOut" />
+                </DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+            <DoubleAnimation Storyboard.TargetName="CompactContent" Storyboard.TargetProperty="Opacity"
+                             To="0" Duration="0:0:0.12" />
+            <DoubleAnimation Storyboard.TargetName="ExpandedContent" Storyboard.TargetProperty="Opacity"
+                             To="0" Duration="0:0:0.12" />
+            <DoubleAnimation Storyboard.TargetName="NotificationContent" Storyboard.TargetProperty="Opacity"
+                             To="1" BeginTime="0:0:0.15" Duration="0:0:0.2" />
         </Storyboard>
     </Window.Resources>
 
@@ -158,9 +190,9 @@
                                        FontSize="14" FontWeight="SemiBold" Margin="0,0,12,0"/>
                                        
                             <!-- Clima -->
-                            <TextBlock Style="{StaticResource IconText}"
-                                       Text="{Binding WeatherGlyph}"
-                                       FontSize="12" Margin="0,0,4,0"/>
+                            <TextBlock Text="{Binding WeatherGlyph}"
+                                       FontFamily="Segoe UI Emoji"
+                                       FontSize="14" Margin="0,0,6,0"/>
                             <TextBlock Text="{Binding WeatherText}"
                                        Foreground="{StaticResource TextSecondaryBrush}"
                                        FontSize="13" FontWeight="SemiBold"/>
@@ -189,9 +221,22 @@
                         </StackPanel>
                     </Grid>
 
+                    <!-- ===== Notificación ===== -->
+                    <Grid x:Name="NotificationContent" Height="38" VerticalAlignment="Top" Margin="18,0" Opacity="0" IsHitTestVisible="False">
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <TextBlock Style="{StaticResource IconText}"
+                                       Text="{Binding CurrentNotification.Glyph}"
+                                       Foreground="{Binding CurrentNotification.Foreground}"
+                                       FontSize="16" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding CurrentNotification.Text}"
+                                       Foreground="{StaticResource TextPrimaryBrush}"
+                                       FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Grid>
+
                     <!-- ===== Expandido ===== -->
                     <Grid x:Name="ExpandedContent"
-                          Height="180" VerticalAlignment="Top"
+                          Height="170" VerticalAlignment="Top"
                           Opacity="0"
                           IsHitTestVisible="{Binding IsExpanded}"
                           RenderTransformOrigin="0.5,0">
@@ -199,13 +244,40 @@
                             <ScaleTransform ScaleX="0.9" ScaleY="0.9" />
                         </Grid.RenderTransform>
 
-                        <!-- Vinilo: a la mitad en el top -->
+                        <!-- Vinilo: estático, fuera del clip para que sobresalga -->
                         <Grid x:Name="DiscHost" Width="150" Height="150"
                               HorizontalAlignment="Center" VerticalAlignment="Top"
                               Margin="0,-115,0,0" IsHitTestVisible="False">
                             <Grid.RenderTransform>
                                 <TranslateTransform Y="-115" />
                             </Grid.RenderTransform>
+                            
+                            <Grid.Style>
+                                <Style TargetType="Grid">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding ShowHardwarePanel}" Value="True">
+                                            <DataTrigger.EnterActions>
+                                                <BeginStoryboard>
+                                                    <Storyboard>
+                                                        <DoubleAnimation Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.25">
+                                                            <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                                        </DoubleAnimation>
+                                                    </Storyboard>
+                                                </BeginStoryboard>
+                                            </DataTrigger.EnterActions>
+                                            <DataTrigger.ExitActions>
+                                                <BeginStoryboard>
+                                                    <Storyboard>
+                                                        <DoubleAnimation Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.25">
+                                                            <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                                        </DoubleAnimation>
+                                                    </Storyboard>
+                                                </BeginStoryboard>
+                                            </DataTrigger.ExitActions>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Grid.Style>
 
                             <Grid RenderTransformOrigin="0.5,0.5">
                                 <Grid.RenderTransform>
@@ -237,79 +309,210 @@
                                 <Ellipse Width="11" Height="11" Fill="#000000" Stroke="#40FFFFFF" StrokeThickness="1" />
                             </Grid>
 
-                            <!-- Reflejo fijo (no gira) para dar sensación de vinilo real -->
+                            <!-- Reflejo fijo -->
                             <Ellipse Fill="{StaticResource VinylSheenBrush}" />
                             <Ellipse Stroke="#26FFFFFF" StrokeThickness="1" />
                         </Grid>
 
-                        <StackPanel Margin="16,0,16,10" VerticalAlignment="Bottom">
-                            <!-- Title & Artist -->
-                            <TextBlock Text="{Binding Title}"
-                                       Foreground="{StaticResource TextPrimaryBrush}"
-                                       FontSize="15" FontWeight="SemiBold"
-                                       TextTrimming="CharacterEllipsis" TextAlignment="Center" />
-                            <TextBlock Text="{Binding Artist}"
-                                       Foreground="{StaticResource TextSecondaryBrush}"
-                                       FontSize="13" Margin="0,2,0,0"
-                                       TextTrimming="CharacterEllipsis" TextAlignment="Center" />
-
-                            <!-- Progress Bar & Times -->
-                            <Grid Margin="16,8,16,8">
+                        <!-- Zona de contenido deslizable (Con Clip) -->
+                        <Grid ClipToBounds="True">
+                            
+                            <!-- Panel 1: Media Text -->
+                            <Grid x:Name="PanelMedia">
+                                <Grid.RenderTransform>
+                                    <TranslateTransform X="0" />
+                                </Grid.RenderTransform>
                                 <Grid.Style>
                                     <Style TargetType="Grid">
                                         <Style.Triggers>
-                                            <DataTrigger Binding="{Binding HasProgress}" Value="False">
-                                                <Setter Property="Visibility" Value="Collapsed" />
+                                            <DataTrigger Binding="{Binding ShowHardwarePanel}" Value="True">
+                                                <DataTrigger.EnterActions>
+                                                    <BeginStoryboard>
+                                                        <Storyboard>
+                                                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.X)" To="-420" Duration="0:0:0.35">
+                                                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                                            </DoubleAnimation>
+                                                        </Storyboard>
+                                                    </BeginStoryboard>
+                                                </DataTrigger.EnterActions>
+                                                <DataTrigger.ExitActions>
+                                                    <BeginStoryboard>
+                                                        <Storyboard>
+                                                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.X)" To="0" Duration="0:0:0.35">
+                                                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                                            </DoubleAnimation>
+                                                        </Storyboard>
+                                                    </BeginStoryboard>
+                                                </DataTrigger.ExitActions>
                                             </DataTrigger>
                                         </Style.Triggers>
                                     </Style>
                                 </Grid.Style>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
 
-                                <TextBlock Grid.Column="0" Text="{Binding PositionText}" 
-                                           Foreground="{StaticResource TextTertiaryBrush}" 
-                                           FontSize="11" Margin="0,0,8,0" VerticalAlignment="Center" />
+                                <StackPanel Margin="16,0,16,14" VerticalAlignment="Bottom">
+                                    <!-- Title & Artist -->
+                                    <TextBlock Text="{Binding Title}"
+                                               Foreground="{StaticResource TextPrimaryBrush}"
+                                               FontSize="15" FontWeight="SemiBold"
+                                               TextTrimming="CharacterEllipsis" TextAlignment="Center" />
+                                    <TextBlock Text="{Binding Artist}"
+                                               Foreground="{StaticResource TextSecondaryBrush}"
+                                               FontSize="13" Margin="0,0,0,0"
+                                               TextTrimming="CharacterEllipsis" TextAlignment="Center" />
 
-                                <ProgressBar Grid.Column="1" Value="{Binding ProgressPercentage}" 
-                                             Maximum="100" Height="3" BorderThickness="0" VerticalAlignment="Center">
-                                    <ProgressBar.Foreground>
-                                        <SolidColorBrush Color="#FFFFFFFF"/>
-                                    </ProgressBar.Foreground>
-                                    <ProgressBar.Background>
-                                        <SolidColorBrush Color="#33FFFFFF"/>
-                                    </ProgressBar.Background>
-                                    <ProgressBar.Template>
-                                        <ControlTemplate TargetType="ProgressBar">
-                                            <Grid x:Name="TemplateRoot">
-                                                <Border Background="{TemplateBinding Background}" CornerRadius="1.5" />
-                                                <Border x:Name="PART_Track">
-                                                    <Border x:Name="PART_Indicator" Background="{TemplateBinding Foreground}" CornerRadius="1.5" HorizontalAlignment="Left" />
-                                                </Border>
-                                            </Grid>
-                                        </ControlTemplate>
-                                    </ProgressBar.Template>
-                                </ProgressBar>
+                                    <!-- Progress Bar & Times -->
+                                    <Grid Margin="16,4,16,8">
+                                        <Grid.Style>
+                                            <Style TargetType="Grid">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding HasProgress}" Value="False">
+                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Grid.Style>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
 
-                                <TextBlock Grid.Column="2" Text="{Binding DurationText}" 
-                                           Foreground="{StaticResource TextTertiaryBrush}" 
-                                           FontSize="11" Margin="8,0,0,0" VerticalAlignment="Center" />
+                                        <TextBlock Grid.Column="0" Text="{Binding PositionText}" 
+                                                   Foreground="{StaticResource TextTertiaryBrush}" 
+                                                   FontSize="11" Margin="0,0,8,0" VerticalAlignment="Center" />
+
+                                        <ProgressBar Grid.Column="1" Value="{Binding ProgressPercentage}" 
+                                                     Maximum="100" Height="3" BorderThickness="0" VerticalAlignment="Center">
+                                            <ProgressBar.Foreground>
+                                                <SolidColorBrush Color="#FFFFFFFF"/>
+                                            </ProgressBar.Foreground>
+                                            <ProgressBar.Background>
+                                                <SolidColorBrush Color="#33FFFFFF"/>
+                                            </ProgressBar.Background>
+                                            <ProgressBar.Template>
+                                                <ControlTemplate TargetType="ProgressBar">
+                                                    <Grid x:Name="TemplateRoot">
+                                                        <Border Background="{TemplateBinding Background}" CornerRadius="1.5" />
+                                                        <Border x:Name="PART_Track">
+                                                            <Border x:Name="PART_Indicator" Background="{TemplateBinding Foreground}" CornerRadius="1.5" HorizontalAlignment="Left" />
+                                                        </Border>
+                                                    </Grid>
+                                                </ControlTemplate>
+                                            </ProgressBar.Template>
+                                        </ProgressBar>
+
+                                        <TextBlock Grid.Column="2" Text="{Binding DurationText}" 
+                                                   Foreground="{StaticResource TextTertiaryBrush}" 
+                                                   FontSize="11" Margin="8,0,0,0" VerticalAlignment="Center" />
+                                    </Grid>
+
+                                    <!-- Controls -->
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                        <Button Style="{StaticResource MediaButton}" Content="&#xE892;"
+                                                Command="{Binding PreviousCommand}" ToolTip="Anterior" />
+                                        <Button Style="{StaticResource PlayButton}" Margin="16,0"
+                                                Content="{Binding IsPlaying, Converter={StaticResource PlayPauseGlyph}}"
+                                                Command="{Binding PlayPauseCommand}" ToolTip="Reproducir / Pausar" />
+                                        <Button Style="{StaticResource MediaButton}" Content="&#xE893;"
+                                                Command="{Binding NextCommand}" ToolTip="Siguiente" />
+                                    </StackPanel>
+                                </StackPanel>
                             </Grid>
 
-                            <!-- Controls -->
-                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                <Button Style="{StaticResource MediaButton}" Content="&#xE892;"
-                                        Command="{Binding PreviousCommand}" ToolTip="Anterior" />
-                                <Button Style="{StaticResource PlayButton}" Margin="16,0"
-                                        Content="{Binding IsPlaying, Converter={StaticResource PlayPauseGlyph}}"
-                                        Command="{Binding PlayPauseCommand}" ToolTip="Reproducir / Pausar" />
-                                <Button Style="{StaticResource MediaButton}" Content="&#xE893;"
-                                        Command="{Binding NextCommand}" ToolTip="Siguiente" />
-                            </StackPanel>
-                        </StackPanel>
+                            <!-- Panel 2: Hardware -->
+                            <Grid x:Name="PanelHardware" Background="Transparent">
+                                <Grid.RenderTransform>
+                                    <TranslateTransform X="420" />
+                                </Grid.RenderTransform>
+                                <Grid.Style>
+                                    <Style TargetType="Grid">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding ShowHardwarePanel}" Value="True">
+                                                <DataTrigger.EnterActions>
+                                                    <BeginStoryboard>
+                                                        <Storyboard>
+                                                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.X)" To="0" Duration="0:0:0.35">
+                                                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                                            </DoubleAnimation>
+                                                        </Storyboard>
+                                                    </BeginStoryboard>
+                                                </DataTrigger.EnterActions>
+                                                <DataTrigger.ExitActions>
+                                                    <BeginStoryboard>
+                                                        <Storyboard>
+                                                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.X)" To="420" Duration="0:0:0.35">
+                                                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                                            </DoubleAnimation>
+                                                        </Storyboard>
+                                                    </BeginStoryboard>
+                                                </DataTrigger.ExitActions>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Grid.Style>
+
+                                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                                    <TextBlock Text="Telemetría del Sistema" Foreground="#FFFFFFFF" FontSize="14" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,0,0,16" />
+                                    
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                        <!-- CPU -->
+                                        <Border Background="#26FFFFFF" CornerRadius="12" Padding="16,12" Margin="0,0,12,0" MinWidth="120">
+                                            <StackPanel>
+                                                <TextBlock Text="CPU Core" Foreground="#B3FFFFFF" FontSize="12" />
+                                                <TextBlock Text="{Binding CpuTemp}" Foreground="#34D399" FontSize="26" FontWeight="Bold" Margin="0,4,0,0" />
+                                            </StackPanel>
+                                        </Border>
+                                        <!-- GPU -->
+                                        <Border Background="#26FFFFFF" CornerRadius="12" Padding="16,12" MinWidth="120">
+                                            <StackPanel>
+                                                <TextBlock Text="GPU Core" Foreground="#B3FFFFFF" FontSize="12" />
+                                                <TextBlock Text="{Binding GpuTemp}" Foreground="#34D399" FontSize="26" FontWeight="Bold" Margin="0,4,0,0" />
+                                            </StackPanel>
+                                        </Border>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Grid>
+                        </Grid>
+
+                        <!-- Paginator Toggle Slider -->
+                        <CheckBox IsChecked="{Binding ShowHardwarePanel}" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,4">
+                            <CheckBox.Template>
+                                <ControlTemplate TargetType="CheckBox">
+                                    <Border Width="36" Height="6" Background="#33FFFFFF" CornerRadius="3" Cursor="Hand" ToolTip="Alternar Vista">
+                                        <Border x:Name="Thumb" Width="18" Height="6" Background="{StaticResource TextPrimaryBrush}" CornerRadius="3" HorizontalAlignment="Left">
+                                            <Border.RenderTransform>
+                                                <TranslateTransform X="0" />
+                                            </Border.RenderTransform>
+                                        </Border>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsChecked" Value="True">
+                                            <Trigger.EnterActions>
+                                                <BeginStoryboard>
+                                                    <Storyboard>
+                                                        <DoubleAnimation Storyboard.TargetName="Thumb" Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.X)" To="18" Duration="0:0:0.25">
+                                                            <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                                        </DoubleAnimation>
+                                                    </Storyboard>
+                                                </BeginStoryboard>
+                                            </Trigger.EnterActions>
+                                            <Trigger.ExitActions>
+                                                <BeginStoryboard>
+                                                    <Storyboard>
+                                                        <DoubleAnimation Storyboard.TargetName="Thumb" Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.X)" To="0" Duration="0:0:0.25">
+                                                            <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                                        </DoubleAnimation>
+                                                    </Storyboard>
+                                                </BeginStoryboard>
+                                            </Trigger.ExitActions>
+                                        </Trigger>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="Thumb" Property="Background" Value="{StaticResource AccentBrush}"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </CheckBox.Template>
+                        </CheckBox>
                     </Grid>
                 </Grid>
             </Border>
