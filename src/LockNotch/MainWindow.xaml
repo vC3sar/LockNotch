@@ -29,13 +29,13 @@
         <!-- Compacto -> Expandido: rebote suave estilo iOS -->
         <Storyboard x:Key="ExpandStoryboard">
             <DoubleAnimation Storyboard.TargetName="Island" Storyboard.TargetProperty="Width"
-                             To="240" Duration="0:0:0.55">
+                             To="420" Duration="0:0:0.55">
                 <DoubleAnimation.EasingFunction>
                     <BackEase EasingMode="EaseOut" Amplitude="0.28" />
                 </DoubleAnimation.EasingFunction>
             </DoubleAnimation>
             <DoubleAnimation Storyboard.TargetName="Island" Storyboard.TargetProperty="Height"
-                             To="300" Duration="0:0:0.55">
+                             To="160" Duration="0:0:0.55">
                 <DoubleAnimation.EasingFunction>
                     <BackEase EasingMode="EaseOut" Amplitude="0.28" />
                 </DoubleAnimation.EasingFunction>
@@ -191,7 +191,7 @@
 
                     <!-- ===== Expandido ===== -->
                     <Grid x:Name="ExpandedContent"
-                          Height="300" VerticalAlignment="Top"
+                          Height="160" VerticalAlignment="Top"
                           Opacity="0"
                           IsHitTestVisible="{Binding IsExpanded}"
                           RenderTransformOrigin="0.5,0">
@@ -199,24 +199,27 @@
                             <ScaleTransform ScaleX="0.9" ScaleY="0.9" />
                         </Grid.RenderTransform>
 
-                        <!-- Portada curvada giratoria en la parte superior -->
-                        <Grid x:Name="DiscHost" Width="240" Height="240"
+                        <!-- Vinilo: a la mitad en el top -->
+                        <Grid x:Name="DiscHost" Width="160" Height="160"
                               HorizontalAlignment="Center" VerticalAlignment="Top"
-                              Margin="0,-24,0,0" IsHitTestVisible="False">
+                              Margin="0,-80,0,0" IsHitTestVisible="False">
                             <Grid.RenderTransform>
                                 <TranslateTransform Y="-80" />
                             </Grid.RenderTransform>
-                            <Grid.Effect>
-                                <DropShadowEffect Color="Black" BlurRadius="12" ShadowDepth="4" Opacity="0.5" Direction="270" />
-                            </Grid.Effect>
 
                             <Grid RenderTransformOrigin="0.5,0.5">
                                 <Grid.RenderTransform>
                                     <RotateTransform x:Name="DiscRotation" />
                                 </Grid.RenderTransform>
 
-                                <Ellipse Fill="{StaticResource ArtPlaceholderBrush}" />
-                                <Ellipse>
+                                <Ellipse Fill="{StaticResource VinylBrush}" />
+                                <!-- Surcos -->
+                                <Ellipse Width="150" Height="150" Stroke="#14FFFFFF" StrokeThickness="0.7" />
+                                <Ellipse Width="140" Height="140" Stroke="#0FFFFFFF" StrokeThickness="0.7" />
+
+                                <!-- Etiqueta con la portada -->
+                                <Ellipse Width="140" Height="140" Fill="{StaticResource ArtPlaceholderBrush}" />
+                                <Ellipse Width="140" Height="140">
                                     <Ellipse.Fill>
                                         <ImageBrush ImageSource="{Binding Thumbnail}" Stretch="UniformToFill" />
                                     </Ellipse.Fill>
@@ -230,35 +233,42 @@
                                         </Style>
                                     </Ellipse.Style>
                                 </Ellipse>
+                                <Ellipse Width="140" Height="140" Stroke="#33000000" StrokeThickness="2" />
+                                <Ellipse Width="11" Height="11" Fill="#000000" Stroke="#40FFFFFF" StrokeThickness="1" />
                             </Grid>
+
+                            <!-- Reflejo fijo (no gira) para dar sensación de vinilo real -->
+                            <Ellipse Fill="{StaticResource VinylSheenBrush}" />
+                            <Ellipse Stroke="#26FFFFFF" StrokeThickness="1" />
                         </Grid>
 
-                        <StackPanel Margin="0,224,0,0" HorizontalAlignment="Center" VerticalAlignment="Top">
-                            <TextBlock Text="{Binding Artist}"
-                                       Foreground="{StaticResource TextSecondaryBrush}"
-                                       FontSize="11" Margin="0,4,0,0"
-                                       TextTrimming="CharacterEllipsis" TextAlignment="Center" />
-                            <TextBlock Text="{Binding Title}"
-                                       Foreground="{StaticResource TextPrimaryBrush}"
-                                       FontSize="13" FontWeight="SemiBold" Margin="0,1,0,0"
-                                       TextTrimming="CharacterEllipsis" TextAlignment="Center" />
-                                       
-                            <!-- Pequeña barra de progreso simulada -->
-                            <Rectangle Width="32" Height="2" Fill="{StaticResource TextTertiaryBrush}" Margin="0,4,0,0" RadiusX="1" RadiusY="1" />
+                        <Grid Margin="16,80,16,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
 
-                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,6,0,0">
+                            <StackPanel VerticalAlignment="Center" Margin="0,0,10,0">
+                                <TextBlock Text="{Binding Title}"
+                                           Foreground="{StaticResource TextPrimaryBrush}"
+                                           FontSize="15" FontWeight="SemiBold"
+                                           TextTrimming="CharacterEllipsis" TextAlignment="Left" />
+                                <TextBlock Text="{Binding Artist}"
+                                           Foreground="{StaticResource TextSecondaryBrush}"
+                                           FontSize="13" Margin="0,2,0,0"
+                                           TextTrimming="CharacterEllipsis" TextAlignment="Left" />
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                                 <Button Style="{StaticResource MediaButton}" Content="&#xE892;"
-                                        Width="32" Height="32" FontSize="14"
                                         Command="{Binding PreviousCommand}" ToolTip="Anterior" />
                                 <Button Style="{StaticResource PlayButton}" Margin="12,0"
-                                        Width="40" Height="40" FontSize="18"
                                         Content="{Binding IsPlaying, Converter={StaticResource PlayPauseGlyph}}"
                                         Command="{Binding PlayPauseCommand}" ToolTip="Reproducir / Pausar" />
                                 <Button Style="{StaticResource MediaButton}" Content="&#xE893;"
-                                        Width="32" Height="32" FontSize="14"
                                         Command="{Binding NextCommand}" ToolTip="Siguiente" />
                             </StackPanel>
-                        </StackPanel>
+                        </Grid>
                     </Grid>
                 </Grid>
             </Border>

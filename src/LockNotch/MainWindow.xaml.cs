@@ -27,7 +27,7 @@ public partial class MainWindow : Window
         _expand = (Storyboard)FindResource("ExpandStoryboard");
         _collapse = (Storyboard)FindResource("CollapseStoryboard");
 
-        var spinAnim = new DoubleAnimation(0, 360, TimeSpan.FromSeconds(6)) { RepeatBehavior = RepeatBehavior.Forever };
+        var spinAnim = new DoubleAnimation(0, 360, TimeSpan.FromSeconds(4)) { RepeatBehavior = RepeatBehavior.Forever };
         Storyboard.SetTargetName(spinAnim, "DiscRotation");
         Storyboard.SetTargetProperty(spinAnim, new PropertyPath("Angle"));
         _discSpin = new Storyboard();
