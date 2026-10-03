@@ -9,6 +9,11 @@ public sealed class WeatherService : IWeatherService, IDisposable
     private System.Threading.Timer? _timer;
     private readonly HttpClient _http = new();
     
+    public WeatherService()
+    {
+        _http.DefaultRequestHeaders.Add("User-Agent", "LockNotch/1.0");
+    }
+
     private double? _lat;
     private double? _lon;
 

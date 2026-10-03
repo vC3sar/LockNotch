@@ -17,6 +17,7 @@ public partial class MainWindow : Window
     private readonly Storyboard _collapse;
     private readonly Storyboard _notify;
     private readonly Storyboard _discSpin;
+    private readonly Storyboard _visualizerAnim;
     private bool _discSpinStarted;
     private IntPtr _hwnd;
 
@@ -35,6 +36,25 @@ public partial class MainWindow : Window
         Storyboard.SetTargetProperty(spinAnim, new PropertyPath("Angle"));
         _discSpin = new Storyboard();
         _discSpin.Children.Add(spinAnim);
+
+        // Animación del ecualizador
+        _visualizerAnim = new Storyboard();
+        var rnd = new Random();
+        for (int i = 1; i <= 4; i++)
+        {
+            var anim = new DoubleAnimation
+            {
+                From = 4,
+                To = rnd.Next(10, 16),
+                Duration = TimeSpan.FromMilliseconds(rnd.Next(250, 450)),
+                AutoReverse = true,
+                RepeatBehavior = RepeatBehavior.Forever,
+                EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut }
+            };
+            Storyboard.SetTargetName(anim, $"Bar{i}");
+            Storyboard.SetTargetProperty(anim, new PropertyPath("Height"));
+            _visualizerAnim.Children.Add(anim);
+        }
 
         _vm.PropertyChanged += OnViewModelPropertyChanged;
         SourceInitialized += OnSourceInitialized;
@@ -88,11 +108,13 @@ public partial class MainWindow : Window
                     if (!_discSpinStarted)
                     {
                         _discSpin.Begin(this, true);
+                        _visualizerAnim.Begin(this, true);
                         _discSpinStarted = true;
                     }
                     else
                     {
                         _discSpin.Resume(this);
+                        _visualizerAnim.Resume(this);
                     }
                 }
                 else
@@ -100,6 +122,7 @@ public partial class MainWindow : Window
                     if (_discSpinStarted)
                     {
                         _discSpin.Pause(this);
+                        _visualizerAnim.Pause(this);
                     }
                 }
                 break;
