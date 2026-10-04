@@ -33,7 +33,7 @@ public sealed class NotificationService : INotificationService, IDisposable
         catch { }
     }
 
-    private async void OnNotificationChanged(UserNotificationListener sender, UserNotificationChangedEventArgs args)
+    private void OnNotificationChanged(UserNotificationListener sender, UserNotificationChangedEventArgs args)
     {
         if (args.ChangeKind != UserNotificationChangedKind.Added) return;
 

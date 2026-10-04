@@ -62,7 +62,7 @@ public partial class SettingsWindow : Window
 
     private async void AutoDetectLocation_Click(object sender, RoutedEventArgs e)
     {
-        var button = (Button)sender;
+        var button = (System.Windows.Controls.Button)sender;
         string originalContent = button.Content.ToString() ?? "";
         try
         {
@@ -92,6 +92,19 @@ public partial class SettingsWindow : Window
             button.Content = "Auto-detectar ubicación (IP)";
             button.IsEnabled = true;
         }
+    }
+
+    private void RepoLink_Click(object sender, MouseButtonEventArgs e)
+    {
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = "https://github.com/vC3sar/LockNotch",
+                UseShellExecute = true
+            });
+        }
+        catch { }
     }
 
     private void Save_Click(object sender, RoutedEventArgs e)

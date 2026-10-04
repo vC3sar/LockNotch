@@ -159,6 +159,12 @@
                         </ListBoxItem>
                         <ListBoxItem>
                             <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE771;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="16" Margin="0,0,12,0"/>
+                                <TextBlock Text="Apariencia" FontSize="15"/>
+                            </StackPanel>
+                        </ListBoxItem>
+                        <ListBoxItem>
+                            <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="&#xE946;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="16" Margin="0,0,12,0"/>
                                 <TextBlock Text="Acerca de" FontSize="15"/>
                             </StackPanel>
@@ -238,6 +244,19 @@
                             </StackPanel>
                         </StackPanel>
 
+                        <!-- TAB APARIENCIA -->
+                        <StackPanel x:Name="TabAppearance" Visibility="Collapsed">
+                            <TextBlock Text="Apariencia y Temas" FontSize="22" FontWeight="Bold" Foreground="White" Margin="0,0,0,8"/>
+                            <TextBlock Text="Personaliza los colores del LockNotch." Foreground="#888" Margin="0,0,0,24"/>
+
+                            <TextBlock Text="Tema Global" FontSize="16" FontWeight="SemiBold" Foreground="#34D399" Margin="0,0,0,12"/>
+                            
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
+                                <RadioButton x:Name="RbThemeDark" Content="Oscuro (Dark)" IsChecked="True" Margin="0,0,24,0" Foreground="White" Cursor="Hand"/>
+                                <RadioButton x:Name="RbThemeLight" Content="Claro (Light)" Foreground="White" Cursor="Hand"/>
+                            </StackPanel>
+                        </StackPanel>
+
                         <!-- TAB ACERCA DE -->
                         <StackPanel x:Name="TabAbout" Visibility="Collapsed">
                             <TextBlock Text="Acerca de LockNotch" FontSize="22" FontWeight="Bold" Foreground="White" Margin="0,0,0,24"/>
@@ -259,7 +278,18 @@
                                 </StackPanel>
                             </Border>
 
-                            <TextBlock Text="Desarrollado y conceptualizado para llevar la experiencia premium al escritorio de Windows." Foreground="#888" TextWrapping="Wrap" Margin="0,16,0,0"/>
+                            <TextBlock Foreground="#888" TextWrapping="Wrap" Margin="0,16,0,0">
+                                <Run Text="Un proyecto desarrollado por "/>
+                                <Run Text="vC3sar" FontWeight="Bold" Foreground="White"/>
+                                <Run Text=" para llevar la experiencia premium al escritorio de Windows."/>
+                            </TextBlock>
+
+                            <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
+                                <TextBlock Text="&#xE12B;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" Foreground="#888" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <TextBlock Foreground="#34D399" Cursor="Hand" TextDecorations="Underline" MouseLeftButtonUp="RepoLink_Click" ToolTip="Abrir GitHub" VerticalAlignment="Center">
+                                    https://github.com/vC3sar/LockNotch
+                                </TextBlock>
+                            </StackPanel>
                         </StackPanel>
                     </Grid>
                 </Border>
