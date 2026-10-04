@@ -18,7 +18,7 @@ public sealed class WeatherService : IWeatherService, IDisposable
     private double? _lon;
 
     private string _temperature = "--°c";
-    private string _conditionGlyph = "\xE706"; // Soleado por defecto
+    private string _conditionGlyph = "\u2600\uFE0F"; // Soleado por defecto
 
     public event EventHandler? WeatherChanged;
 
@@ -39,15 +39,35 @@ public sealed class WeatherService : IWeatherService, IDisposable
             {
                 try
                 {
-                    var ipResponse = await _http.GetStringAsync("http://ip-api.com/json/");
-                    using var ipDoc = JsonDocument.Parse(ipResponse);
-                    _lat = ipDoc.RootElement.GetProperty("lat").GetDouble();
-                    _lon = ipDoc.RootElement.GetProperty("lon").GetDouble();
+                    // Intentar obtener ubicación precisa usando la API nativa de Windows 10/11
+                    var accessStatus = await Windows.Devices.Geolocation.Geolocator.RequestAccessAsync();
+                    if (accessStatus == Windows.Devices.Geolocation.GeolocationAccessStatus.Allowed)
+                    {
+                        var geolocator = new Windows.Devices.Geolocation.Geolocator { DesiredAccuracyInMeters = 5000 };
+                        var pos = await geolocator.GetGeopositionAsync(TimeSpan.FromMinutes(5), TimeSpan.FromSeconds(10));
+                        _lat = pos.Coordinate.Point.Position.Latitude;
+                        _lon = pos.Coordinate.Point.Position.Longitude;
+                    }
+                    else
+                    {
+                        throw new UnauthorizedAccessException("Geolocator access denied.");
+                    }
                 }
                 catch
                 {
-                    _lat = 40.4165; // Fallback Madrid
-                    _lon = -3.7026;
+                    // Fallback a geolocalización por IP si el usuario deniega el permiso GPS o falla
+                    try
+                    {
+                        var ipResponse = await _http.GetStringAsync("http://ip-api.com/json/");
+                        using var ipDoc = JsonDocument.Parse(ipResponse);
+                        _lat = ipDoc.RootElement.GetProperty("lat").GetDouble();
+                        _lon = ipDoc.RootElement.GetProperty("lon").GetDouble();
+                    }
+                    catch
+                    {
+                        _lat = 40.4165; // Fallback extremo: Madrid
+                        _lon = -3.7026;
+                    }
                 }
             }
 
@@ -72,20 +92,20 @@ public sealed class WeatherService : IWeatherService, IDisposable
 
     private static string GetGlyphForCode(int code)
     {
-        // WMO Weather interpretation codes using Segoe Fluent Icons
+        // WMO Weather interpretation codes mapped to Emojis (using Unicode escapes to avoid compilation corruption)
         return code switch
         {
-            0 => "\xE706", // Despejado (Sunny)
-            1 => "\xE706", // Poco nublado
-            2 or 3 => "\xE753", // Nubes (Partly cloudy / overcast)
-            45 or 48 => "\xE753", // Niebla (Fog)
-            51 or 53 or 55 or 56 or 57 => "\xE738", // Llovizna (Drizzle)
-            61 or 63 or 65 or 66 or 67 => "\xE738", // Lluvia (Rain)
-            71 or 73 or 75 or 77 => "\xE9C9", // Nieve (Snow)
-            80 or 81 or 82 => "\xE738", // Chubascos (Showers)
-            85 or 86 => "\xE9C9", // Chubascos de nieve (Snow showers)
-            95 or 96 or 99 => "\xE73A", // Tormenta (Thunderstorm)
-            _ => "\xE706"
+            0 => "\u2600\uFE0F", // Despejado (Sunny)
+            1 => "\uD83C\uDF24\uFE0F", // Poco nublado
+            2 or 3 => "\u2601\uFE0F", // Nubes (Partly cloudy / overcast)
+            45 or 48 => "\uD83C\uDF2B\uFE0F", // Niebla (Fog)
+            51 or 53 or 55 or 56 or 57 => "\uD83C\uDF26\uFE0F", // Llovizna (Drizzle)
+            61 or 63 or 65 or 66 or 67 => "\uD83C\uDF27\uFE0F", // Lluvia (Rain)
+            71 or 73 or 75 or 77 => "\u2744\uFE0F", // Nieve (Snow)
+            80 or 81 or 82 => "\uD83C\uDF27\uFE0F", // Chubascos (Showers)
+            85 or 86 => "\uD83C\uDF28\uFE0F", // Chubascos de nieve (Snow showers)
+            95 or 96 or 99 => "\u26C8\uFE0F", // Tormenta (Thunderstorm)
+            _ => "\u2600\uFE0F"
         };
     }
 

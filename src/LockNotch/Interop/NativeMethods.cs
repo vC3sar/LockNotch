@@ -12,6 +12,8 @@ internal static class NativeMethods
 
     public const int WM_MOUSEACTIVATE = 0x0021;
     public const int WM_DISPLAYCHANGE = 0x007E;
+    public const int WM_MOUSEWHEEL = 0x020A;
+    public const int WM_MOUSEHWHEEL = 0x020E;
     public const int MA_NOACTIVATE = 3;
 
     public static readonly IntPtr HWND_TOPMOST = new(-1);
@@ -103,4 +105,12 @@ internal static class NativeMethods
         rect = default;
         return false;
     }
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool GetClientRect(IntPtr hWnd, out RECT lpRect);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool ClientToScreen(IntPtr hWnd, ref POINT lpPoint);
 }

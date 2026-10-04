@@ -58,18 +58,27 @@ public sealed class MediaService : IMediaService, IDisposable
 
         var knownApps = new[] { "spotify", "chrome", "msedge", "firefox", "brave", "vlc", "music", "opera", "tidal", "apple", "itunes" };
 
-        var best = sessions.FirstOrDefault(s => 
-            s.GetPlaybackInfo()?.PlaybackStatus == GlobalSystemMediaTransportControlsSessionPlaybackStatus.Playing &&
+        // 1. Obtener TODAS las sesiones que están reproduciendo activamente (PLAYING)
+        var playingSessions = sessions.Where(s => 
+            s.GetPlaybackInfo()?.PlaybackStatus == GlobalSystemMediaTransportControlsSessionPlaybackStatus.Playing).ToList();
+
+        if (playingSessions.Count > 0)
+        {
+            // Si hay varias reproduciéndose, dar prioridad a la que sea una app "conocida"
+            var bestPlaying = playingSessions.FirstOrDefault(s => 
+                knownApps.Any(app => s.SourceAppUserModelId?.Contains(app, StringComparison.OrdinalIgnoreCase) == true));
+                
+            return bestPlaying ?? playingSessions.First();
+        }
+
+        // 2. Si ninguna está reproduciéndose, buscar una en PAUSA pero que sea de una app conocida
+        var bestPausedKnown = sessions.FirstOrDefault(s => 
             knownApps.Any(app => s.SourceAppUserModelId?.Contains(app, StringComparison.OrdinalIgnoreCase) == true));
             
-        if (best != null) return best;
+        if (bestPausedKnown != null) return bestPausedKnown;
 
-        best = sessions.FirstOrDefault(s => 
-            knownApps.Any(app => s.SourceAppUserModelId?.Contains(app, StringComparison.OrdinalIgnoreCase) == true));
-            
-        if (best != null) return best;
-
-        return manager.GetCurrentSession();
+        // 3. Fallback final: devolver la sesión activa que Windows considere principal
+        return manager.GetCurrentSession() ?? sessions.FirstOrDefault();
     }
 
     private async Task AttachSessionAsync(GsmtcSession? session)

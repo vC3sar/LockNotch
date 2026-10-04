@@ -1,0 +1,63 @@
+<Window x:Class="LockNotch.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Configuración de LockNotch" Height="450" Width="400"
+        WindowStartupLocation="CenterScreen"
+        Background="#1E1E1E" Foreground="White"
+        FontFamily="Segoe UI Variable Display, Segoe UI">
+
+    <Window.Resources>
+        <Style TargetType="TextBlock">
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Margin" Value="0,5,0,2"/>
+        </Style>
+        <Style TargetType="TextBox">
+            <Setter Property="Background" Value="#2D2D2D"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderBrush" Value="#3F3F3F"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="5"/>
+            <Setter Property="Margin" Value="0,0,0,10"/>
+        </Style>
+        <Style TargetType="Button">
+            <Setter Property="Background" Value="#34D399"/>
+            <Setter Property="Foreground" Value="Black"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Padding" Value="10,5"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Text="Accesos Rápidos (App Launcher)" FontSize="18" FontWeight="Bold" Margin="0,0,0,15"/>
+
+        <StackPanel Grid.Row="1">
+            <TextBlock Text="Aplicación 1 (Navegador)"/>
+            <TextBox x:Name="TxtApp1"/>
+
+            <TextBlock Text="Aplicación 2 (Archivos)"/>
+            <TextBox x:Name="TxtApp2"/>
+
+            <TextBlock Text="Aplicación 3 (Terminal)"/>
+            <TextBox x:Name="TxtApp3"/>
+
+            <TextBlock Text="Aplicación 4 (Configuración)"/>
+            <TextBox x:Name="TxtApp4"/>
+
+            <TextBlock Text="Aplicación 5 (Extra)"/>
+            <TextBox x:Name="TxtApp5"/>
+        </StackPanel>
+
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,15,0,0">
+            <Button Content="Guardar" Click="Save_Click" Margin="0,0,10,0"/>
+            <Button Content="Cancelar" Click="Cancel_Click" Background="#3F3F3F" Foreground="White"/>
+        </StackPanel>
+    </Grid>
+</Window>

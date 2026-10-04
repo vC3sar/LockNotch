@@ -22,6 +22,8 @@ public partial class IslandViewModel : ObservableObject, IDisposable
     private readonly IUsbService _usb;
     private readonly IVolumeService _volume;
     private readonly IHardwareService _hardware;
+    private readonly INotificationService _notifications;
+    private readonly SettingsService _settings;
     private readonly SynchronizationContext _ui;
 
     private byte[]? _thumbnailBytes;
@@ -40,7 +42,7 @@ public partial class IslandViewModel : ObservableObject, IDisposable
     private string _weatherText = "--°";
 
     [ObservableProperty]
-    private string _weatherGlyph = "\xE706";
+    private string _weatherGlyph = "\u2600\uFE0F";
 
     [ObservableProperty]
     private string _batteryText = "--%";
@@ -107,14 +109,20 @@ public partial class IslandViewModel : ObservableObject, IDisposable
     private string _gpuTemp = "--°";
 
     [ObservableProperty]
-    private bool _showHardwarePanel;
+    private int _currentPageIndex;
+
+    [ObservableProperty]
+    private int _totalPages = 4;
+
+    public void NextPage() => CurrentPageIndex = (CurrentPageIndex + 1) % TotalPages;
+    public void PreviousPage() => CurrentPageIndex = (CurrentPageIndex - 1 + TotalPages) % TotalPages;
 
     public IslandState State =>
         IsHiddenForFullscreen ? IslandState.Hidden :
         IsNotifying ? IslandState.Notification :
         IsExpanded ? IslandState.Expanded : IslandState.Compact;
 
-    public IslandViewModel(IClockService clock, IFullscreenService fullscreen, IMediaService media, IBatteryService battery, IWeatherService weather, IUsbService usb, IVolumeService volume, IHardwareService hardware)
+    public IslandViewModel(IClockService clock, IFullscreenService fullscreen, IMediaService media, IBatteryService battery, IWeatherService weather, IUsbService usb, IVolumeService volume, IHardwareService hardware, INotificationService notifications, SettingsService settings)
     {
         _clock = clock;
         _fullscreen = fullscreen;
@@ -124,6 +132,8 @@ public partial class IslandViewModel : ObservableObject, IDisposable
         _usb = usb;
         _volume = volume;
         _hardware = hardware;
+        _notifications = notifications;
+        _settings = settings;
         _ui = SynchronizationContext.Current ?? new SynchronizationContext();
 
         TimeText = _clock.Now.ToString("h:mm tt");
@@ -136,8 +146,11 @@ public partial class IslandViewModel : ObservableObject, IDisposable
         _usb.UsbDeviceChanged += OnUsbDeviceChanged;
         _volume.VolumeChanged += OnVolumeChanged;
         _hardware.HardwareChanged += OnHardwareChanged;
+        _notifications.NotificationReceived += OnNotificationReceived;
 
         _progressTimer = new System.Threading.Timer(OnProgressTick, null, Timeout.Infinite, Timeout.Infinite);
+        
+        InitializeToggles();
     }
 
     public async Task StartAsync()
@@ -208,18 +221,230 @@ public partial class IslandViewModel : ObservableObject, IDisposable
 
     #endregion
 
+    #region App Launcher
+
+    [RelayCommand]
+    private void LaunchApp(string? appId)
+    {
+        if (string.IsNullOrWhiteSpace(appId)) return;
+        try
+        {
+            string appPath = appId switch
+            {
+                "1" => _settings.Current.AppLauncher1,
+                "2" => _settings.Current.AppLauncher2,
+                "3" => _settings.Current.AppLauncher3,
+                "4" => _settings.Current.AppLauncher4,
+                "5" => _settings.Current.AppLauncher5,
+                _ => appId // Fallback: si pasan una ruta directa como ms-settings:network-wifi
+            };
+
+            if (string.IsNullOrWhiteSpace(appPath)) return;
+
+            var psi = new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = appPath,
+                UseShellExecute = true
+            };
+            System.Diagnostics.Process.Start(psi);
+            IsExpanded = false;
+        }
+        catch { }
+    }
+
+    #endregion
+
+    #region Control Center Toggles
+
+    [ObservableProperty] private bool _isWifiEnabled;
+    [ObservableProperty] private bool _isBluetoothEnabled;
+    [ObservableProperty] private bool _isDarkModeEnabled;
+    [ObservableProperty] private bool _isDndEnabled;
+    
+    private DateTime _suppressUsbNotificationsUntil = DateTime.MinValue;
+
+    private async void InitializeToggles()
+    {
+        try
+        {
+            var radios = await Windows.Devices.Radios.Radio.GetRadiosAsync();
+            var wifi = radios.FirstOrDefault(r => r.Kind == Windows.Devices.Radios.RadioKind.WiFi);
+            var bt = radios.FirstOrDefault(r => r.Kind == Windows.Devices.Radios.RadioKind.Bluetooth);
+            
+            if (wifi != null) IsWifiEnabled = wifi.State == Windows.Devices.Radios.RadioState.On;
+            if (bt != null) IsBluetoothEnabled = bt.State == Windows.Devices.Radios.RadioState.On;
+
+            using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize");
+            if (key != null && key.GetValue("AppsUseLightTheme") is int val) IsDarkModeEnabled = val == 0;
+            
+            // Focus Assist (DND) check via WNF is complex, using generic registry key for QuietHours
+            using var qhKey = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Policies\Microsoft\Windows\CurrentVersion\QuietHours");
+            if (qhKey != null && qhKey.GetValue("EnableQuietHours") is int qh) IsDndEnabled = qh == 1;
+        }
+        catch { }
+    }
+
+    [RelayCommand]
+    private async Task ToggleWifi()
+    {
+        _suppressUsbNotificationsUntil = DateTime.Now.AddSeconds(5);
+        try
+        {
+            var radios = await Windows.Devices.Radios.Radio.GetRadiosAsync();
+            var wifi = radios.FirstOrDefault(r => r.Kind == Windows.Devices.Radios.RadioKind.WiFi);
+            if (wifi != null)
+            {
+                // WPF ya cambió IsWifiEnabled al nuevo estado deseado al hacer clic.
+                var targetState = IsWifiEnabled ? Windows.Devices.Radios.RadioState.On : Windows.Devices.Radios.RadioState.Off;
+                await wifi.SetStateAsync(targetState);
+                
+                // Confirmamos el estado real
+                IsWifiEnabled = wifi.State == Windows.Devices.Radios.RadioState.On;
+                return;
+            }
+        }
+        catch { }
+
+        // Fallback agresivo vía netsh
+        try
+        {
+            string cmd = IsWifiEnabled ? "interface set interface \"Wi-Fi\" admin=enable" : "interface set interface \"Wi-Fi\" admin=disable";
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = "netsh",
+                Arguments = cmd,
+                CreateNoWindow = true,
+                UseShellExecute = false
+            });
+        }
+        catch { }
+    }
+
+    [RelayCommand]
+    private async Task ToggleBluetooth()
+    {
+        _suppressUsbNotificationsUntil = DateTime.Now.AddSeconds(5);
+        try
+        {
+            var radios = await Windows.Devices.Radios.Radio.GetRadiosAsync();
+            var bt = radios.FirstOrDefault(r => r.Kind == Windows.Devices.Radios.RadioKind.Bluetooth);
+            if (bt != null)
+            {
+                var targetState = IsBluetoothEnabled ? Windows.Devices.Radios.RadioState.On : Windows.Devices.Radios.RadioState.Off;
+                await bt.SetStateAsync(targetState);
+                IsBluetoothEnabled = bt.State == Windows.Devices.Radios.RadioState.On;
+                return;
+            }
+        }
+        catch { }
+
+        // Fallback agresivo vía PowerShell
+        try
+        {
+            string psCmd = IsBluetoothEnabled ? "Start-Service bthserv" : "Stop-Service bthserv -Force";
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = "powershell",
+                Arguments = $"-Command \"{psCmd}\"",
+                CreateNoWindow = true,
+                UseShellExecute = false
+            });
+        }
+        catch { }
+    }
+
+    [RelayCommand]
+    private void ToggleDarkMode()
+    {
+        try
+        {
+            string keyPath = @"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize";
+            using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(keyPath, true);
+            if (key != null)
+            {
+                // IsDarkModeEnabled ya refleja el nuevo estado deseado gracias al ToggleButton
+                int newValue = IsDarkModeEnabled ? 0 : 1;
+                key.SetValue("AppsUseLightTheme", newValue, Microsoft.Win32.RegistryValueKind.DWord);
+                key.SetValue("SystemUsesLightTheme", newValue, Microsoft.Win32.RegistryValueKind.DWord);
+            }
+        }
+        catch { }
+    }
+
+    [RelayCommand]
+    private void ToggleDnd()
+    {
+        try
+        {
+            // IsDndEnabled ya refleja el nuevo estado deseado gracias al ToggleButton
+            
+            // Toggle QuietHours global registry key
+            string qhPath = @"Software\Policies\Microsoft\Windows\CurrentVersion\QuietHours";
+            using var key = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(qhPath, true);
+            if (key != null)
+            {
+                key.SetValue("EnableQuietHours", IsDndEnabled ? 1 : 0, Microsoft.Win32.RegistryValueKind.DWord);
+            }
+            
+            // No cerramos el panel
+        }
+        catch { }
+    }
+
+    #endregion
+
     #region Notifications
 
     public void EnqueueNotification(NotificationRequest req)
     {
         _ui.Post(_ =>
         {
+            // Si la notificación actual es del mismo tipo, la actualizamos en vivo
+            if (IsNotifying && CurrentNotification?.Id == req.Id)
+            {
+                CurrentNotification = req;
+                
+                // Reiniciar el temporizador para prolongar su estancia
+                _notificationCts?.Cancel();
+                _notificationCts?.Dispose();
+                _notificationCts = new CancellationTokenSource();
+                
+                _ = RunNotificationTimerAsync(req.Duration, _notificationCts.Token);
+                return;
+            }
+
+            // Si hay una en la cola del mismo tipo, la reemplazamos
+            var list = _notificationQueue.ToList();
+            var idx = list.FindIndex(n => n.Id == req.Id);
+            if (idx >= 0)
+            {
+                list[idx] = req;
+                _notificationQueue.Clear();
+                foreach (var item in list) _notificationQueue.Enqueue(item);
+                return;
+            }
+
             _notificationQueue.Enqueue(req);
             if (!IsNotifying) ProcessNextNotification();
         }, null);
     }
 
-    private async void ProcessNextNotification()
+    private async Task RunNotificationTimerAsync(TimeSpan duration, CancellationToken token)
+    {
+        try
+        {
+            await Task.Delay(duration, token);
+            if (!token.IsCancellationRequested)
+            {
+                IsNotifying = false;
+                await Task.Delay(200, token); // Pequeña pausa para permitir que termine la animación
+                if (!token.IsCancellationRequested) ProcessNextNotification();
+            }
+        }
+        catch (TaskCanceledException) { }
+    }
+
+    private void ProcessNextNotification()
     {
         if (_notificationQueue.Count == 0)
         {
@@ -234,19 +459,8 @@ public partial class IslandViewModel : ObservableObject, IDisposable
         _notificationCts?.Cancel();
         _notificationCts?.Dispose();
         _notificationCts = new CancellationTokenSource();
-        var token = _notificationCts.Token;
-
-        try
-        {
-            await Task.Delay(req.Duration, token);
-            if (!token.IsCancellationRequested)
-            {
-                IsNotifying = false;
-                await Task.Delay(200, token); // Small gap for collapse animation
-                if (!token.IsCancellationRequested) ProcessNextNotification();
-            }
-        }
-        catch (TaskCanceledException) { }
+        
+        _ = RunNotificationTimerAsync(req.Duration, _notificationCts.Token);
     }
 
     #endregion
@@ -390,7 +604,7 @@ public partial class IslandViewModel : ObservableObject, IDisposable
             {
                 var brush = (System.Windows.Media.Brush)System.Windows.Application.Current.Resources[charging ? "AccentBrush" : "TextPrimaryBrush"];
                 var text = charging ? $"Cargando: {BatteryText}" : "Batería en uso";
-                EnqueueNotification(new NotificationRequest(BatteryGlyph, text, brush, TimeSpan.FromSeconds(2.5)));
+                EnqueueNotification(new NotificationRequest("battery", BatteryGlyph, text, brush, TimeSpan.FromSeconds(2.5)));
             }
             _wasCharging = charging;
 
@@ -406,9 +620,10 @@ public partial class IslandViewModel : ObservableObject, IDisposable
     private void OnUsbDeviceChanged(object? sender, bool connected) =>
         _ui.Post(_ =>
         {
+            if (DateTime.Now < _suppressUsbNotificationsUntil) return;
             var brush = (System.Windows.Media.Brush)System.Windows.Application.Current.Resources[connected ? "AccentBrush" : "TextSecondaryBrush"];
             var text = connected ? "Dispositivo USB conectado" : "Dispositivo USB desconectado";
-            EnqueueNotification(new NotificationRequest("\xE88E", text, brush, TimeSpan.FromSeconds(2.5)));
+            EnqueueNotification(new NotificationRequest("usb", "\xE88E", text, brush, TimeSpan.FromSeconds(2.5)));
         }, null);
 
     private void OnVolumeChanged(object? sender, VolumeChangedEventArgs e) =>
@@ -417,7 +632,7 @@ public partial class IslandViewModel : ObservableObject, IDisposable
             var brush = (System.Windows.Media.Brush)System.Windows.Application.Current.Resources[e.IsMuted ? "DangerBrush" : "TextPrimaryBrush"];
             var glyph = e.IsMuted ? "\xE74F" : (e.VolumePercent >= 50 ? "\xE995" : "\xE993");
             var text = e.IsMuted ? "Silenciado" : $"Volumen: {Math.Round(e.VolumePercent)}%";
-            EnqueueNotification(new NotificationRequest(glyph, text, brush, TimeSpan.FromSeconds(2)));
+            EnqueueNotification(new NotificationRequest("volume", glyph, text, brush, TimeSpan.FromSeconds(2)));
         }, null);
 
     private void OnHardwareChanged(object? sender, HardwareChangedEventArgs e) =>
@@ -425,6 +640,24 @@ public partial class IslandViewModel : ObservableObject, IDisposable
         {
             CpuTemp = e.CpuTemp;
             GpuTemp = e.GpuTemp;
+        }, null);
+
+    private void OnNotificationReceived(object? sender, NotificationEventArgs e) =>
+        _ui.Post(_ =>
+        {
+            if (IsDndEnabled) return; // Respetar el Modo No Molestar interno
+
+            string glyph = "\xE7E7"; // Default mail/message icon
+            if (e.AppName.Contains("Discord", StringComparison.OrdinalIgnoreCase)) glyph = "\xE909"; // Discord/Chat like icon
+            if (e.AppName.Contains("WhatsApp", StringComparison.OrdinalIgnoreCase)) glyph = "\xE8F3";
+
+            var brush = (System.Windows.Media.Brush)System.Windows.Application.Current.Resources["AccentBrush"];
+            string text = string.IsNullOrWhiteSpace(e.Body) ? e.Title : $"{e.Title}: {e.Body}";
+            
+            // Si el texto es muy largo, recortarlo
+            if (text.Length > 40) text = text.Substring(0, 37) + "...";
+
+            EnqueueNotification(new NotificationRequest("win_notif_" + e.AppName, glyph, text, brush, TimeSpan.FromSeconds(4)));
         }, null);
 
     public void Dispose()
@@ -437,6 +670,7 @@ public partial class IslandViewModel : ObservableObject, IDisposable
         _usb.UsbDeviceChanged -= OnUsbDeviceChanged;
         _volume.VolumeChanged -= OnVolumeChanged;
         _hardware.HardwareChanged -= OnHardwareChanged;
+        _notifications.NotificationReceived -= OnNotificationReceived;
         CancelPendingCollapse();
         _notificationCts?.Dispose();
         _progressTimer?.Dispose();

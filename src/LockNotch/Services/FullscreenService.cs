@@ -61,10 +61,20 @@ public sealed class FullscreenService : IFullscreenService, IDisposable
         var monitor = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONULL);
         if (monitor == IntPtr.Zero || monitor != GetPrimaryMonitor()) return false;
         if (!TryGetMonitorRect(monitor, out var mon)) return false;
-        if (!GetWindowRect(hwnd, out var win)) return false;
+        
+        // Obtener el área de cliente real de la ventana (sin bordes ni barra de título)
+        if (!GetClientRect(hwnd, out var clientRect)) return false;
 
-        return win.Left <= mon.Left && win.Top <= mon.Top &&
-               win.Right >= mon.Right && win.Bottom >= mon.Bottom;
+        // Convertir las coordenadas de cliente a coordenadas de pantalla
+        var topLeft = new POINT { X = clientRect.Left, Y = clientRect.Top };
+        var bottomRight = new POINT { X = clientRect.Right, Y = clientRect.Bottom };
+        
+        ClientToScreen(hwnd, ref topLeft);
+        ClientToScreen(hwnd, ref bottomRight);
+
+        // Una ventana es fullscreen real (como F11 o un juego) si su área cliente cubre TODO el monitor
+        return topLeft.X <= mon.Left && topLeft.Y <= mon.Top &&
+               bottomRight.X >= mon.Right && bottomRight.Y >= mon.Bottom;
     }
 
     public void Dispose() => _timer?.Dispose();

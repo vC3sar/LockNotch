@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Interop;
+using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Threading;
 using LockNotch.Interop;
@@ -69,6 +70,11 @@ public partial class MainWindow : Window
         WindowHelper.PositionTopCenterOnPrimary(_hwnd);
     }
 
+    private int _scrollAccumulator;
+    private const int ScrollThreshold = 120; // Aumentado para mayor precisión y evitar brincos
+    private DateTime _lastPageTurn = DateTime.MinValue;
+    private readonly TimeSpan _pageTurnCooldown = TimeSpan.FromMilliseconds(350);
+
     private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
     {
         switch (msg)
@@ -79,6 +85,54 @@ public partial class MainWindow : Window
 
             case NativeMethods.WM_DISPLAYCHANGE:
                 SchedulePosition();
+                break;
+
+            case NativeMethods.WM_MOUSEHWHEEL:
+                if (_vm.IsExpanded && Island.IsMouseOver)
+                {
+                    int delta = (short)((ulong)wParam >> 16);
+                    _scrollAccumulator += delta;
+
+                    if (Math.Abs(_scrollAccumulator) >= ScrollThreshold)
+                    {
+                        if (DateTime.Now - _lastPageTurn >= _pageTurnCooldown)
+                        {
+                            if (_scrollAccumulator > 0) _vm.NextPage();
+                            else _vm.PreviousPage();
+                            _lastPageTurn = DateTime.Now;
+                        }
+                        _scrollAccumulator = 0;
+                    }
+                    handled = true;
+                }
+                else
+                {
+                    _scrollAccumulator = 0;
+                }
+                break;
+
+            case NativeMethods.WM_MOUSEWHEEL:
+                if (_vm.IsExpanded && Island.IsMouseOver)
+                {
+                    int delta = (short)((ulong)wParam >> 16);
+                    _scrollAccumulator += delta;
+
+                    if (Math.Abs(_scrollAccumulator) >= ScrollThreshold)
+                    {
+                        if (DateTime.Now - _lastPageTurn >= _pageTurnCooldown)
+                        {
+                            if (_scrollAccumulator < 0) _vm.NextPage();
+                            else _vm.PreviousPage();
+                            _lastPageTurn = DateTime.Now;
+                        }
+                        _scrollAccumulator = 0;
+                    }
+                    handled = true;
+                }
+                else
+                {
+                    _scrollAccumulator = 0;
+                }
                 break;
         }
         return IntPtr.Zero;
@@ -92,6 +146,10 @@ public partial class MainWindow : Window
     {
         switch (e.PropertyName)
         {
+            case nameof(IslandViewModel.CurrentPageIndex):
+                UpdateCarousel();
+                break;
+
             case nameof(IslandViewModel.State):
                 Storyboard sb = _vm.State switch
                 {
@@ -100,6 +158,7 @@ public partial class MainWindow : Window
                     _ => _collapse
                 };
                 sb.Begin(this, HandoffBehavior.SnapshotAndReplace);
+                if (_vm.State == IslandState.Expanded) UpdateCarousel();
                 break;
 
             case nameof(IslandViewModel.IsPlaying):
@@ -159,4 +218,63 @@ public partial class MainWindow : Window
     private void Island_MouseLeftButtonUp(object sender, MouseButtonEventArgs e) => _vm.ExpandCommand.Execute(null);
 
     private void Exit_Click(object sender, RoutedEventArgs e) => System.Windows.Application.Current.Shutdown();
+
+    private void UpdateCarousel()
+    {
+        AnimatePanel(PanelMedia, 0);
+        AnimatePanel(PanelAppLauncher, 1);
+        AnimatePanel(PanelControlCenter, 2);
+        AnimatePanel(PanelHardware, 3);
+
+        // Ocultar disco de vinilo suavemente en otras páginas
+        double targetOpacity = _vm.CurrentPageIndex == 0 ? 1.0 : 0.0;
+        DiscHost.BeginAnimation(OpacityProperty, new DoubleAnimation(targetOpacity, TimeSpan.FromMilliseconds(250)));
+
+        // Animate the paginator dot (each dot is 18px wide)
+        var thumbTransform = (TranslateTransform)PaginatorThumb.RenderTransform;
+        var animThumb = new DoubleAnimation(_vm.CurrentPageIndex * 18.0, TimeSpan.FromMilliseconds(300))
+        {
+            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+        };
+        thumbTransform.BeginAnimation(TranslateTransform.XProperty, animThumb);
+
+        if (_vm.State == IslandState.Expanded)
+        {
+            UpdateExpandedSize();
+        }
+    }
+
+    private void UpdateExpandedSize()
+    {
+        double targetWidth = _vm.CurrentPageIndex == 0 ? 460.0 : 420.0;
+        double targetHeight = _vm.CurrentPageIndex == 0 ? 250.0 : 170.0;
+        double targetRadius = _vm.CurrentPageIndex == 0 ? 48.0 : 36.0;
+        double targetDiscY = _vm.CurrentPageIndex == 0 ? -230.0 : -390.0; // Disc de 390px: en pág 0 oculta 230px, muestra 160px. En otras, oculta todo.
+
+        var widthAnim = new DoubleAnimation(targetWidth, TimeSpan.FromMilliseconds(450)) { EasingFunction = new BackEase { EasingMode = EasingMode.EaseOut, Amplitude = 0.28 } };
+        var heightAnim = new DoubleAnimation(targetHeight, TimeSpan.FromMilliseconds(450)) { EasingFunction = new BackEase { EasingMode = EasingMode.EaseOut, Amplitude = 0.28 } };
+        var radiusAnim = new DoubleAnimation(targetRadius, TimeSpan.FromMilliseconds(450)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } };
+        var marginAnim = new ThicknessAnimation(new Thickness(0, targetDiscY, 0, 0), TimeSpan.FromMilliseconds(450)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } };
+
+        Island.BeginAnimation(WidthProperty, widthAnim);
+        Island.BeginAnimation(HeightProperty, heightAnim);
+        IslandBorder.BeginAnimation(Helpers.NotchHelper.BottomRadiusProperty, radiusAnim);
+        DiscHost.BeginAnimation(MarginProperty, marginAnim);
+    }
+
+    private void AnimatePanel(UIElement panel, int panelIndex)
+    {
+        if (panel == null) return;
+        var transform = (TranslateTransform)panel.RenderTransform;
+        // Si panelIndex == CurrentPageIndex, X = 0
+        // Si panelIndex > CurrentPageIndex, X > 0 (A la derecha, esperando entrar)
+        // Si panelIndex < CurrentPageIndex, X < 0 (A la izquierda, ya pasó)
+        double targetX = (panelIndex - _vm.CurrentPageIndex) * 420.0;
+
+        var anim = new DoubleAnimation(targetX, TimeSpan.FromMilliseconds(350))
+        {
+            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+        };
+        transform.BeginAnimation(TranslateTransform.XProperty, anim);
+    }
 }
