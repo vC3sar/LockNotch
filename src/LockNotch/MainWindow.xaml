@@ -306,10 +306,9 @@
                             <ScaleTransform ScaleX="0.9" ScaleY="0.9" />
                         </Grid.RenderTransform>
 
-                        <!-- Vinilo: estático, fuera del clip para que sobresalga -->
-                        <Grid x:Name="DiscHost" Width="390" Height="390"
+                        <Grid x:Name="DiscHost" Width="260" Height="260"
                               HorizontalAlignment="Center" VerticalAlignment="Top"
-                              Margin="0,-300,0,0" IsHitTestVisible="False">
+                              Margin="0,-147,0,0" IsHitTestVisible="False">
                             <Grid.RenderTransform>
                                 <TranslateTransform Y="-115" />
                             </Grid.RenderTransform>
@@ -321,12 +320,12 @@
 
                                 <Ellipse Fill="{StaticResource VinylBrush}" />
                                 <!-- Surcos -->
-                                <Ellipse Width="370" Height="370" Stroke="#14FFFFFF" StrokeThickness="1" />
-                                <Ellipse Width="350" Height="350" Stroke="#0FFFFFFF" StrokeThickness="1" />
+                                <Ellipse Width="246" Height="246" Stroke="#14FFFFFF" StrokeThickness="0.8" />
+                                <Ellipse Width="232" Height="232" Stroke="#0FFFFFFF" StrokeThickness="0.8" />
 
                                 <!-- Etiqueta con la portada -->
-                                <Ellipse Width="350" Height="350" Fill="{StaticResource ArtPlaceholderBrush}" />
-                                <Ellipse Width="350" Height="350">
+                                <Ellipse Width="232" Height="232" Fill="{StaticResource ArtPlaceholderBrush}" />
+                                <Ellipse Width="232" Height="232">
                                     <Ellipse.Fill>
                                         <ImageBrush ImageSource="{Binding Thumbnail}" Stretch="UniformToFill" />
                                     </Ellipse.Fill>
@@ -340,8 +339,8 @@
                                         </Style>
                                     </Ellipse.Style>
                                 </Ellipse>
-                                <Ellipse Width="350" Height="350" Stroke="#33000000" StrokeThickness="3" />
-                                <Ellipse Width="28" Height="28" Fill="#000000" Stroke="#40FFFFFF" StrokeThickness="2" />
+                                <Ellipse Width="232" Height="232" Stroke="#33000000" StrokeThickness="2" />
+                                <Ellipse Width="18" Height="18" Fill="#000000" Stroke="#40FFFFFF" StrokeThickness="1" />
                             </Grid>
 
                             <!-- Reflejo fijo -->
@@ -359,18 +358,18 @@
                                 </Grid.RenderTransform>
 
                                 <StackPanel Margin="16,0,16,14" VerticalAlignment="Bottom">
-                                    <!-- Title & Artist -->
-                                    <TextBlock Text="{Binding Title}"
-                                               Foreground="{StaticResource TextPrimaryBrush}"
-                                               FontSize="15" FontWeight="SemiBold"
-                                               TextTrimming="CharacterEllipsis" TextAlignment="Center" />
+                                    <!-- Artist & Title -->
                                     <TextBlock Text="{Binding Artist}"
                                                Foreground="{StaticResource TextSecondaryBrush}"
-                                               FontSize="13" Margin="0,0,0,0"
+                                               FontSize="12" Margin="0,0,0,2"
+                                               TextTrimming="CharacterEllipsis" TextAlignment="Center" />
+                                    <TextBlock Text="{Binding Title}"
+                                               Foreground="{StaticResource TextPrimaryBrush}"
+                                               FontSize="15" FontWeight="Bold"
                                                TextTrimming="CharacterEllipsis" TextAlignment="Center" />
 
                                     <!-- Progress Bar & Times -->
-                                    <Grid Margin="16,4,16,8">
+                                    <Grid Margin="16,12,16,8">
                                         <Grid.Style>
                                             <Style TargetType="Grid">
                                                 <Style.Triggers>
@@ -388,10 +387,10 @@
 
                                         <TextBlock Grid.Column="0" Text="{Binding PositionText}" 
                                                    Foreground="{StaticResource TextTertiaryBrush}" 
-                                                   FontSize="11" Margin="0,0,8,0" VerticalAlignment="Center" />
+                                                   FontSize="10" Margin="0,0,8,0" VerticalAlignment="Center" />
 
                                         <ProgressBar Grid.Column="1" Value="{Binding ProgressPercentage}" 
-                                                     Maximum="100" Height="3" BorderThickness="0" VerticalAlignment="Center">
+                                                     Maximum="100" Height="4" BorderThickness="0" VerticalAlignment="Center">
                                             <ProgressBar.Foreground>
                                                 <SolidColorBrush Color="#FFFFFFFF"/>
                                             </ProgressBar.Foreground>
@@ -401,9 +400,9 @@
                                             <ProgressBar.Template>
                                                 <ControlTemplate TargetType="ProgressBar">
                                                     <Grid x:Name="TemplateRoot">
-                                                        <Border Background="{TemplateBinding Background}" CornerRadius="1.5" />
+                                                        <Border Background="{TemplateBinding Background}" CornerRadius="2" />
                                                         <Border x:Name="PART_Track">
-                                                            <Border x:Name="PART_Indicator" Background="{TemplateBinding Foreground}" CornerRadius="1.5" HorizontalAlignment="Left" />
+                                                            <Border x:Name="PART_Indicator" Background="{TemplateBinding Foreground}" CornerRadius="2" HorizontalAlignment="Left" />
                                                         </Border>
                                                     </Grid>
                                                 </ControlTemplate>
@@ -412,21 +411,27 @@
 
                                         <TextBlock Grid.Column="2" Text="{Binding DurationText}" 
                                                    Foreground="{StaticResource TextTertiaryBrush}" 
-                                                   FontSize="11" Margin="8,0,0,0" VerticalAlignment="Center" />
+                                                   FontSize="10" Margin="8,0,0,0" VerticalAlignment="Center" />
                                     </Grid>
 
-                                    <!-- Controls -->
-                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                    <!-- Minimalist Controls -->
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,4,0,0">
                                         <Button Style="{StaticResource MediaButton}" Content="&#xE892;"
-                                                Command="{Binding PreviousCommand}" ToolTip="Anterior" />
-                                        <Button Style="{StaticResource PlayButton}" Margin="16,0"
+                                                Command="{Binding PreviousCommand}" ToolTip="Anterior" 
+                                                FontSize="14" Width="32" Height="32" Padding="0"/>
+                                                
+                                        <Button Style="{StaticResource PlayButton}" Margin="24,0"
                                                 Content="{Binding IsPlaying, Converter={StaticResource PlayPauseGlyph}}"
-                                                Command="{Binding PlayPauseCommand}" ToolTip="Reproducir / Pausar" />
+                                                Command="{Binding PlayPauseCommand}" ToolTip="Reproducir / Pausar" 
+                                                FontSize="16" Width="40" Height="40" Padding="0"/>
+                                                
                                         <Button Style="{StaticResource MediaButton}" Content="&#xE893;"
-                                                Command="{Binding NextCommand}" ToolTip="Siguiente" />
+                                                Command="{Binding NextCommand}" ToolTip="Siguiente" 
+                                                FontSize="14" Width="32" Height="32" Padding="0"/>
                                     </StackPanel>
                                 </StackPanel>
                             </Grid>
+
 
                             <!-- Panel 1: App Launcher -->
                             <Grid x:Name="PanelAppLauncher" Background="Transparent">

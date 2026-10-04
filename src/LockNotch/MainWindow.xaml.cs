@@ -246,10 +246,10 @@ public partial class MainWindow : Window
 
     private void UpdateExpandedSize()
     {
-        double targetWidth = _vm.CurrentPageIndex == 0 ? 460.0 : 420.0;
+        double targetWidth = _vm.CurrentPageIndex == 0 ? 300.0 : 420.0;
         double targetHeight = _vm.CurrentPageIndex == 0 ? 250.0 : 170.0;
         double targetRadius = _vm.CurrentPageIndex == 0 ? 48.0 : 36.0;
-        double targetDiscY = _vm.CurrentPageIndex == 0 ? -230.0 : -390.0; // Disc de 390px: en pág 0 oculta 230px, muestra 160px. En otras, oculta todo.
+        double targetDiscY = _vm.CurrentPageIndex == 0 ? -147.0 : -260.0; // Disc de 260px: en pág 0 oculta 147px, muestra 113px.
 
         var widthAnim = new DoubleAnimation(targetWidth, TimeSpan.FromMilliseconds(450)) { EasingFunction = new BackEase { EasingMode = EasingMode.EaseOut, Amplitude = 0.28 } };
         var heightAnim = new DoubleAnimation(targetHeight, TimeSpan.FromMilliseconds(450)) { EasingFunction = new BackEase { EasingMode = EasingMode.EaseOut, Amplitude = 0.28 } };
