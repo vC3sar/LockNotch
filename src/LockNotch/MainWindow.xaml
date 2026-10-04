@@ -308,7 +308,7 @@
 
                         <Grid x:Name="DiscHost" Width="260" Height="260"
                               HorizontalAlignment="Center" VerticalAlignment="Top"
-                              Margin="0,-147,0,0" IsHitTestVisible="False">
+                              Margin="0,-156,0,0" IsHitTestVisible="False">
                             <Grid.RenderTransform>
                                 <TranslateTransform Y="-115" />
                             </Grid.RenderTransform>

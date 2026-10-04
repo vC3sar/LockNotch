@@ -12,7 +12,12 @@ public class AppSettings
     public string AppLauncher4 { get; set; } = "notepad.exe";
     public string AppLauncher5 { get; set; } = "mspaint.exe";
 
-    public string Theme { get; set; } = "Dark"; // Dark, Light
+    public bool StartWithWindows { get; set; } = false;
+    public bool HideInFullscreen { get; set; } = true;
+    public double WeatherLatitude { get; set; } = 40.4165; // Default Madrid
+    public double WeatherLongitude { get; set; } = -3.7026;
+    public bool WeatherUseFahrenheit { get; set; } = false;
+    public int HardwareRefreshIntervalSeconds { get; set; } = 2;
 }
 
 public class SettingsService

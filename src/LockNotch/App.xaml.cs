@@ -38,10 +38,10 @@ public partial class App : System.Windows.Application
         _fullscreen = new FullscreenService();
         _media = new MediaService();
         _battery = new BatteryService();
-        _weather = new WeatherService();
+        _weather = new WeatherService(_settings);
         _usb = new UsbService();
         _volume = new VolumeService();
-        _hardware = new HardwareService();
+        _hardware = new HardwareService(_settings);
         _notifications = new NotificationService();
         _viewModel = new IslandViewModel(_clock, _fullscreen, _media, _battery, _weather, _usb, _volume, _hardware, _notifications, _settings);
 

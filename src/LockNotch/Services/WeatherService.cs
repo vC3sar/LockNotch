@@ -8,14 +8,13 @@ public sealed class WeatherService : IWeatherService, IDisposable
 {
     private System.Threading.Timer? _timer;
     private readonly HttpClient _http = new();
+    private readonly SettingsService _settings;
     
-    public WeatherService()
+    public WeatherService(SettingsService settings)
     {
+        _settings = settings;
         _http.DefaultRequestHeaders.Add("User-Agent", "LockNotch/1.0");
     }
-
-    private double? _lat;
-    private double? _lon;
 
     private string _temperature = "--°c";
     private string _conditionGlyph = "\u2600\uFE0F"; // Soleado por defecto
@@ -35,43 +34,11 @@ public sealed class WeatherService : IWeatherService, IDisposable
     {
         try
         {
-            if (_lat is null || _lon is null)
-            {
-                try
-                {
-                    // Intentar obtener ubicación precisa usando la API nativa de Windows 10/11
-                    var accessStatus = await Windows.Devices.Geolocation.Geolocator.RequestAccessAsync();
-                    if (accessStatus == Windows.Devices.Geolocation.GeolocationAccessStatus.Allowed)
-                    {
-                        var geolocator = new Windows.Devices.Geolocation.Geolocator { DesiredAccuracyInMeters = 5000 };
-                        var pos = await geolocator.GetGeopositionAsync(TimeSpan.FromMinutes(5), TimeSpan.FromSeconds(10));
-                        _lat = pos.Coordinate.Point.Position.Latitude;
-                        _lon = pos.Coordinate.Point.Position.Longitude;
-                    }
-                    else
-                    {
-                        throw new UnauthorizedAccessException("Geolocator access denied.");
-                    }
-                }
-                catch
-                {
-                    // Fallback a geolocalización por IP si el usuario deniega el permiso GPS o falla
-                    try
-                    {
-                        var ipResponse = await _http.GetStringAsync("http://ip-api.com/json/");
-                        using var ipDoc = JsonDocument.Parse(ipResponse);
-                        _lat = ipDoc.RootElement.GetProperty("lat").GetDouble();
-                        _lon = ipDoc.RootElement.GetProperty("lon").GetDouble();
-                    }
-                    catch
-                    {
-                        _lat = 40.4165; // Fallback extremo: Madrid
-                        _lon = -3.7026;
-                    }
-                }
-            }
+            var lat = _settings.Current.WeatherLatitude;
+            var lon = _settings.Current.WeatherLongitude;
+            var unit = _settings.Current.WeatherUseFahrenheit ? "&temperature_unit=fahrenheit" : "";
 
-            var url = $"https://api.open-meteo.com/v1/forecast?latitude={_lat}&longitude={_lon}&current_weather=true";
+            var url = $"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current_weather=true{unit}";
             var response = await _http.GetStringAsync(url);
             using var doc = JsonDocument.Parse(response);
             

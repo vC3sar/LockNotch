@@ -13,9 +13,11 @@ public sealed class HardwareService : IHardwareService, IDisposable
     private System.Threading.Timer? _timer;
     private string _cpuTemp = "--°";
     private string _gpuTemp = "--°";
+    private readonly SettingsService _settings;
 
-    public HardwareService()
+    public HardwareService(SettingsService settings)
     {
+        _settings = settings;
         _computer = new Computer
         {
             IsCpuEnabled = true,
@@ -33,7 +35,9 @@ public sealed class HardwareService : IHardwareService, IDisposable
         try
         {
             _computer.Open();
-            _timer = new System.Threading.Timer(UpdateHardware, null, TimeSpan.Zero, TimeSpan.FromSeconds(2));
+            int refresh = _settings.Current.HardwareRefreshIntervalSeconds;
+            if (refresh <= 0) refresh = 2; // Fail-safe
+            _timer = new System.Threading.Timer(UpdateHardware, null, TimeSpan.Zero, TimeSpan.FromSeconds(refresh));
         }
         catch
         {

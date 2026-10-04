@@ -249,7 +249,7 @@ public partial class MainWindow : Window
         double targetWidth = _vm.CurrentPageIndex == 0 ? 300.0 : 420.0;
         double targetHeight = _vm.CurrentPageIndex == 0 ? 250.0 : 170.0;
         double targetRadius = _vm.CurrentPageIndex == 0 ? 48.0 : 36.0;
-        double targetDiscY = _vm.CurrentPageIndex == 0 ? -147.0 : -260.0; // Disc de 260px: en pág 0 oculta 147px, muestra 113px.
+        double targetDiscY = _vm.CurrentPageIndex == 0 ? -156.0 : -260.0; // Disc de 260px: en pág 0 oculta 156px, muestra 104px (40%).
 
         var widthAnim = new DoubleAnimation(targetWidth, TimeSpan.FromMilliseconds(450)) { EasingFunction = new BackEase { EasingMode = EasingMode.EaseOut, Amplitude = 0.28 } };
         var heightAnim = new DoubleAnimation(targetHeight, TimeSpan.FromMilliseconds(450)) { EasingFunction = new BackEase { EasingMode = EasingMode.EaseOut, Amplitude = 0.28 } };
