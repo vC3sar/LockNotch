@@ -25,13 +25,29 @@ public partial class SettingsWindow : Window
 
         // Cargar General
         ChkStartWindows.IsChecked = _settings.Current.StartWithWindows;
-        ChkHideFullscreen.IsChecked = _settings.Current.HideInFullscreen;
+        ChkAllowFullscreen.IsChecked = !_settings.Current.HideInFullscreen;
 
         // Cargar Clima y Hardware
         TxtLat.Text = _settings.Current.WeatherLatitude.ToString(CultureInfo.InvariantCulture);
         TxtLon.Text = _settings.Current.WeatherLongitude.ToString(CultureInfo.InvariantCulture);
         ChkFahrenheit.IsChecked = _settings.Current.WeatherUseFahrenheit;
         TxtRefresh.Text = _settings.Current.HardwareRefreshIntervalSeconds.ToString();
+
+        // Cargar Tema
+        if (_settings.Current.Theme == "Light") RbThemeLight.IsChecked = true;
+        else RbThemeDark.IsChecked = true;
+        
+        // Cargar Fuente
+        foreach (ComboBoxItem item in CmbFont.Items)
+        {
+            if (item.Tag.ToString() == _settings.Current.FontFamily)
+            {
+                CmbFont.SelectedItem = item;
+                break;
+            }
+        }
+        if (CmbFont.SelectedItem == null && CmbFont.Items.Count > 0)
+            CmbFont.SelectedIndex = 0;
     }
 
     private void TitleBar_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -44,11 +60,12 @@ public partial class SettingsWindow : Window
 
     private void NavMenu_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (TabGeneral == null || TabApps == null || TabWeather == null || TabAbout == null) return;
+        if (TabGeneral == null || TabApps == null || TabWeather == null || TabAbout == null || TabAppearance == null) return;
 
         TabGeneral.Visibility = Visibility.Collapsed;
         TabApps.Visibility = Visibility.Collapsed;
         TabWeather.Visibility = Visibility.Collapsed;
+        TabAppearance.Visibility = Visibility.Collapsed;
         TabAbout.Visibility = Visibility.Collapsed;
 
         switch (NavMenu.SelectedIndex)
@@ -56,7 +73,8 @@ public partial class SettingsWindow : Window
             case 0: TabGeneral.Visibility = Visibility.Visible; break;
             case 1: TabApps.Visibility = Visibility.Visible; break;
             case 2: TabWeather.Visibility = Visibility.Visible; break;
-            case 3: TabAbout.Visibility = Visibility.Visible; break;
+            case 3: TabAppearance.Visibility = Visibility.Visible; break;
+            case 4: TabAbout.Visibility = Visibility.Visible; break;
         }
     }
 
@@ -118,7 +136,7 @@ public partial class SettingsWindow : Window
 
         // Guardar General
         _settings.Current.StartWithWindows = ChkStartWindows.IsChecked ?? false;
-        _settings.Current.HideInFullscreen = ChkHideFullscreen.IsChecked ?? true;
+        _settings.Current.HideInFullscreen = !(ChkAllowFullscreen.IsChecked ?? false);
 
         // Guardar Clima y Hardware
         if (double.TryParse(TxtLat.Text, NumberStyles.Any, CultureInfo.InvariantCulture, out double lat))
@@ -132,10 +150,20 @@ public partial class SettingsWindow : Window
         if (int.TryParse(TxtRefresh.Text, out int refresh) && refresh > 0)
             _settings.Current.HardwareRefreshIntervalSeconds = refresh;
 
+        // Guardar Tema y Fuente
+        _settings.Current.Theme = RbThemeLight.IsChecked == true ? "Light" : "Dark";
+        if (CmbFont.SelectedItem is ComboBoxItem selectedFont)
+        {
+            _settings.Current.FontFamily = selectedFont.Tag.ToString() ?? "Normal";
+        }
+
         _settings.Save();
 
         // Aplicar registro de Windows Startup
         ApplyStartupRegistry(_settings.Current.StartWithWindows);
+
+        // Aplicar tema y fuente dinámicamente
+        LockNotch.Helpers.AppearanceManager.Apply(_settings.Current.Theme, _settings.Current.FontFamily);
 
         Close();
     }

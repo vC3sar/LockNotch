@@ -24,6 +24,7 @@ public partial class IslandViewModel : ObservableObject, IDisposable
     private readonly IHardwareService _hardware;
     private readonly INotificationService _notifications;
     private readonly SettingsService _settings;
+    private readonly IDownloadService _downloads;
     private readonly SynchronizationContext _ui;
 
     private byte[]? _thumbnailBytes;
@@ -66,6 +67,21 @@ public partial class IslandViewModel : ObservableObject, IDisposable
 
     [ObservableProperty]
     private NotificationRequest? _currentNotification;
+
+    [ObservableProperty]
+    private bool _hasDownloads;
+
+    [ObservableProperty]
+    private string _downloadsCompactText = "Descargando...";
+
+    [ObservableProperty]
+    private string _activeDownloadsText = "0 descargas";
+
+    [ObservableProperty]
+    private string _downloadsProgressText = "";
+
+    [ObservableProperty]
+    private int _downloadsProgressValue = 0;
 
     private readonly Queue<NotificationRequest> _notificationQueue = new();
     private CancellationTokenSource? _notificationCts;
@@ -122,7 +138,7 @@ public partial class IslandViewModel : ObservableObject, IDisposable
         IsNotifying ? IslandState.Notification :
         IsExpanded ? IslandState.Expanded : IslandState.Compact;
 
-    public IslandViewModel(IClockService clock, IFullscreenService fullscreen, IMediaService media, IBatteryService battery, IWeatherService weather, IUsbService usb, IVolumeService volume, IHardwareService hardware, INotificationService notifications, SettingsService settings)
+    public IslandViewModel(IClockService clock, IFullscreenService fullscreen, IMediaService media, IBatteryService battery, IWeatherService weather, IUsbService usb, IVolumeService volume, IHardwareService hardware, INotificationService notifications, SettingsService settings, IDownloadService downloads)
     {
         _clock = clock;
         _fullscreen = fullscreen;
@@ -134,6 +150,7 @@ public partial class IslandViewModel : ObservableObject, IDisposable
         _hardware = hardware;
         _notifications = notifications;
         _settings = settings;
+        _downloads = downloads;
         _ui = SynchronizationContext.Current ?? new SynchronizationContext();
 
         TimeText = _clock.Now.ToString("h:mm tt");
@@ -147,6 +164,7 @@ public partial class IslandViewModel : ObservableObject, IDisposable
         _volume.VolumeChanged += OnVolumeChanged;
         _hardware.HardwareChanged += OnHardwareChanged;
         _notifications.NotificationReceived += OnNotificationReceived;
+        _downloads.DownloadsChanged += OnDownloadsChanged;
 
         _progressTimer = new System.Threading.Timer(OnProgressTick, null, Timeout.Infinite, Timeout.Infinite);
         
@@ -163,6 +181,41 @@ public partial class IslandViewModel : ObservableObject, IDisposable
         _volume.Start();
         _hardware.Start();
         await _media.InitializeAsync();
+
+        // Mostrar notificación de ubicación inicial
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                var lat = _settings.Current.WeatherLatitude.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                var lon = _settings.Current.WeatherLongitude.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                
+                using var http = new System.Net.Http.HttpClient();
+                var url = $"https://api.bigdatacloud.net/data/reverse-geocode-client?latitude={lat}&longitude={lon}&localityLanguage=es";
+                var json = await http.GetStringAsync(url);
+                
+                using var doc = System.Text.Json.JsonDocument.Parse(json);
+                var root = doc.RootElement;
+                string locName = "";
+                
+                if (root.TryGetProperty("city", out var cityProp) && !string.IsNullOrWhiteSpace(cityProp.GetString()))
+                    locName = cityProp.GetString()!;
+                else if (root.TryGetProperty("locality", out var locProp) && !string.IsNullOrWhiteSpace(locProp.GetString()))
+                    locName = locProp.GetString()!;
+                else if (root.TryGetProperty("principalSubdivision", out var subProp) && !string.IsNullOrWhiteSpace(subProp.GetString()))
+                    locName = subProp.GetString()!;
+                
+                if (!string.IsNullOrEmpty(locName))
+                {
+                    _ui.Post(_ =>
+                    {
+                        var brush = (System.Windows.Media.Brush)System.Windows.Application.Current.Resources["AccentBrush"];
+                        EnqueueNotification(new NotificationRequest("location_startup", "\xE81D", locName, brush, TimeSpan.FromSeconds(2)));
+                    }, null);
+                }
+            }
+            catch { }
+        });
     }
 
     #region Expand / collapse
@@ -568,12 +621,16 @@ public partial class IslandViewModel : ObservableObject, IDisposable
     private void OnFullscreenChanged(object? sender, bool isFullscreen) =>
         _ui.Post(_ =>
         {
-            if (isFullscreen)
+            if (isFullscreen && _settings.Current.HideInFullscreen)
             {
                 CancelPendingCollapse();
                 IsExpanded = false;
+                IsHiddenForFullscreen = true;
             }
-            IsHiddenForFullscreen = isFullscreen;
+            else
+            {
+                IsHiddenForFullscreen = false;
+            }
         }, null);
 
     private bool? _wasCharging;
@@ -624,6 +681,74 @@ public partial class IslandViewModel : ObservableObject, IDisposable
             var brush = (System.Windows.Media.Brush)System.Windows.Application.Current.Resources[connected ? "AccentBrush" : "TextSecondaryBrush"];
             var text = connected ? "Dispositivo USB conectado" : "Dispositivo USB desconectado";
             EnqueueNotification(new NotificationRequest("usb", "\xE88E", text, brush, TimeSpan.FromSeconds(2.5)));
+        }, null);
+
+    private bool _wasHasDownloads;
+
+    [ObservableProperty]
+    private System.Collections.ObjectModel.ObservableCollection<DownloadEvent> _activeDownloadsList = new();
+
+    private void OnDownloadsChanged(object? sender, EventArgs e) =>
+        _ui.Post(_ =>
+        {
+            List<DownloadEvent> active = _downloads.GetActiveDownloads().ToList();
+            HasDownloads = active.Any();
+            
+            TotalPages = HasDownloads ? 5 : 4;
+            if (CurrentPageIndex >= TotalPages) CurrentPageIndex = TotalPages - 1;
+
+            ActiveDownloadsList.Clear();
+            foreach(var d in active) ActiveDownloadsList.Add(d);
+
+            if (active.Count == 0)
+            {
+                ActiveDownloadsText = "0 descargas";
+                DownloadsCompactText = "Descargando...";
+                DownloadsProgressValue = 0;
+                DownloadsProgressText = "";
+            }
+            else if (active.Count == 1)
+            {
+                var d = active[0];
+                ActiveDownloadsText = d.filename;
+                DownloadsCompactText = d.state == "complete" 
+                    ? $"✓ {d.filename}" 
+                    : (d.totalBytes > 0 ? $"↓ {d.progress}% · {d.SpeedText}" : $"↓ {d.bytesReceived / 1048576.0:F1} MB · {d.SpeedText}");
+                
+                DownloadsProgressValue = d.progress;
+                DownloadsProgressText = d.totalBytes > 0 
+                    ? $"{d.bytesReceived / 1048576.0:F1} MB / {d.totalBytes / 1048576.0:F1} MB - {d.speed / 1048576.0:F1} MB/s" 
+                    : $"{d.bytesReceived / 1048576.0:F1} MB - {d.speed / 1048576.0:F1} MB/s";
+
+                if (d.state == "complete") 
+                {
+                    DownloadsProgressText = "Completado";
+                    DownloadsProgressValue = 100;
+                    EnqueueNotification(new NotificationRequest("download_complete", "\xE896", $"✓ {d.filename}", (System.Windows.Media.Brush)System.Windows.Application.Current.Resources["AccentBrush"], TimeSpan.FromSeconds(3)));
+                }
+                else if (d.state == "interrupted")
+                {
+                    DownloadsProgressText = "Error";
+                    EnqueueNotification(new NotificationRequest("download_error", "\xE896", $"✗ {d.filename}", (System.Windows.Media.Brush)System.Windows.Application.Current.Resources["DangerBrush"], TimeSpan.FromSeconds(3)));
+                }
+            }
+            else
+            {
+                ActiveDownloadsText = $"{active.Count} descargas";
+                DownloadsCompactText = $"↓ {active.Count} descargas";
+                int totalProgress = (int)active.Average(x => x.progress);
+                DownloadsProgressValue = totalProgress;
+                DownloadsProgressText = "Descargando múltiples archivos...";
+            }
+
+            if (HasDownloads && !_wasHasDownloads)
+            {
+                var brush = (System.Windows.Media.Brush)System.Windows.Application.Current.Resources["AccentBrush"];
+                EnqueueNotification(new NotificationRequest("download_start", "\xE896", "↓ Descargando...", brush, TimeSpan.FromSeconds(2.5)));
+            }
+
+            _wasHasDownloads = HasDownloads;
+
         }, null);
 
     private void OnVolumeChanged(object? sender, VolumeChangedEventArgs e) =>

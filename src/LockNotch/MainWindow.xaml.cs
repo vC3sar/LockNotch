@@ -225,14 +225,18 @@ public partial class MainWindow : Window
         AnimatePanel(PanelAppLauncher, 1);
         AnimatePanel(PanelControlCenter, 2);
         AnimatePanel(PanelHardware, 3);
+        if (PanelDownloads != null) AnimatePanel(PanelDownloads, 4);
 
         // Ocultar disco de vinilo suavemente en otras páginas
         double targetOpacity = _vm.CurrentPageIndex == 0 ? 1.0 : 0.0;
         DiscHost.BeginAnimation(OpacityProperty, new DoubleAnimation(targetOpacity, TimeSpan.FromMilliseconds(250)));
 
-        // Animate the paginator dot (each dot is 18px wide)
+        double thumbWidth = 72.0 / _vm.TotalPages;
+        PaginatorThumb.Width = thumbWidth;
+
+        // Animate the paginator dot
         var thumbTransform = (TranslateTransform)PaginatorThumb.RenderTransform;
-        var animThumb = new DoubleAnimation(_vm.CurrentPageIndex * 18.0, TimeSpan.FromMilliseconds(300))
+        var animThumb = new DoubleAnimation(_vm.CurrentPageIndex * thumbWidth, TimeSpan.FromMilliseconds(300))
         {
             EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
         };

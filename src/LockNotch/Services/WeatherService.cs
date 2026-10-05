@@ -30,6 +30,11 @@ public sealed class WeatherService : IWeatherService, IDisposable
         _timer ??= new System.Threading.Timer(_ => _ = FetchWeatherAsync(), null, TimeSpan.Zero, TimeSpan.FromMinutes(30));
     }
 
+    public void Refresh()
+    {
+        _ = FetchWeatherAsync();
+    }
+
     private async Task FetchWeatherAsync()
     {
         try

@@ -18,6 +18,8 @@ public class AppSettings
     public double WeatherLongitude { get; set; } = -3.7026;
     public bool WeatherUseFahrenheit { get; set; } = false;
     public int HardwareRefreshIntervalSeconds { get; set; } = 2;
+    public string Theme { get; set; } = "Dark";
+    public string FontFamily { get; set; } = "Normal";
 }
 
 public class SettingsService

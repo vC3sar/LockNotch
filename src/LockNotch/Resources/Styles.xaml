@@ -3,22 +3,20 @@
 
     <!-- Paleta se carga dinámicamente desde Themes/Dark.xaml o Themes/Light.xaml -->
     
-    <LinearGradientBrush x:Key="VinylSheenBrush" StartPoint="0,0" EndPoint="1,1">
-        <GradientStop Color="#40FFFFFF" Offset="0.1" />
-        <GradientStop Color="#00FFFFFF" Offset="0.3" />
-        <GradientStop Color="#00FFFFFF" Offset="0.7" />
-        <GradientStop Color="#40FFFFFF" Offset="0.9" />
-    </LinearGradientBrush>
-
-    <LinearGradientBrush x:Key="ArtPlaceholderBrush" StartPoint="0,0" EndPoint="1,1">
-        <GradientStop Color="#7C3AED" Offset="0" />
-        <GradientStop Color="#DB2777" Offset="0.6" />
-        <GradientStop Color="#F59E0B" Offset="1" />
-    </LinearGradientBrush>
-
     <!-- Tipografía -->
     <FontFamily x:Key="UiFont">Segoe UI Variable Display, Segoe UI</FontFamily>
     <FontFamily x:Key="IconFont">Segoe Fluent Icons, Segoe MDL2 Assets</FontFamily>
+
+    <!-- Popups/tooltips no heredan la fuente de la ventana: se fuerza aquí -->
+    <Style TargetType="ToolTip">
+        <Setter Property="FontFamily" Value="{DynamicResource UiFont}" />
+    </Style>
+    <Style TargetType="ContextMenu">
+        <Setter Property="FontFamily" Value="{DynamicResource UiFont}" />
+    </Style>
+    <Style TargetType="MenuItem">
+        <Setter Property="FontFamily" Value="{DynamicResource UiFont}" />
+    </Style>
 
     <Style x:Key="IconText" TargetType="TextBlock">
         <Setter Property="FontFamily" Value="{DynamicResource IconFont}" />
@@ -72,7 +70,7 @@
         </Setter>
     </Style>
 
-    <Style x:Key="PlayButton" TargetType="Button" BasedOn="{DynamicResource MediaButton}">
+    <Style x:Key="PlayButton" TargetType="Button" BasedOn="{StaticResource MediaButton}">
         <Setter Property="Width" Value="50" />
         <Setter Property="Height" Value="50" />
         <Setter Property="FontSize" Value="22" />

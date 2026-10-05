@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Windows;
 using LockNotch.Services;
 using LockNotch.ViewModels;
@@ -17,11 +18,20 @@ public partial class App : System.Windows.Application
     private HardwareService? _hardware;
     private NotificationService? _notifications;
     private SettingsService? _settings;
+    private DownloadService? _downloads;
     private IslandViewModel? _viewModel;
     private System.Windows.Forms.NotifyIcon? _notifyIcon;
 
     protected override async void OnStartup(StartupEventArgs e)
     {
+        // Chrome Native Messaging Host interception
+        if (e.Args.Any(arg => arg.StartsWith("chrome-extension://")))
+        {
+            NativeMessagingProxy.Run();
+            Shutdown();
+            return;
+        }
+
         _singleInstance = new Mutex(true, "LockNotch.SingleInstance", out bool isFirst);
         if (!isFirst)
         {
@@ -43,7 +53,10 @@ public partial class App : System.Windows.Application
         _volume = new VolumeService();
         _hardware = new HardwareService(_settings);
         _notifications = new NotificationService();
-        _viewModel = new IslandViewModel(_clock, _fullscreen, _media, _battery, _weather, _usb, _volume, _hardware, _notifications, _settings);
+        _downloads = new DownloadService();
+        _viewModel = new IslandViewModel(_clock, _fullscreen, _media, _battery, _weather, _usb, _volume, _hardware, _notifications, _settings, _downloads);
+
+        LockNotch.Helpers.AppearanceManager.Apply(_settings.Current.Theme, _settings.Current.FontFamily);
 
         var window = new MainWindow(_viewModel);
         MainWindow = window;
@@ -53,6 +66,17 @@ public partial class App : System.Windows.Application
 
         await _viewModel.StartAsync();
         await _notifications.InitializeAsync();
+        _downloads.LocationUpdated += (s, loc) =>
+        {
+            if (_settings != null)
+            {
+                _settings.Current.WeatherLatitude = loc.lat;
+                _settings.Current.WeatherLongitude = loc.lon;
+                _settings.Save();
+                _weather?.Refresh();
+            }
+        };
+        _downloads.Start();
     }
 
     private void InitializeTrayIcon()
@@ -118,6 +142,7 @@ public partial class App : System.Windows.Application
         _volume?.Dispose();
         _hardware?.Dispose();
         _notifications?.Dispose();
+        _downloads?.Dispose();
         _singleInstance?.Dispose();
         base.OnExit(e);
     }

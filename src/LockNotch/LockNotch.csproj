@@ -24,4 +24,9 @@
     <PackageReference Include="NAudio.Wasapi" Version="2.2.1" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Resource Include="Resources\Fonts\**\*.otf" />
+    <Resource Include="Resources\Fonts\**\*.ttf" />
+  </ItemGroup>
+
 </Project>
