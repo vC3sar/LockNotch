@@ -21,6 +21,7 @@ public partial class IslandViewModel : ObservableObject, IDisposable
     private readonly IWeatherService _weather;
     private readonly IUsbService _usb;
     private readonly IVolumeService _volume;
+    private readonly IBrightnessService _brightness;
     private readonly IHardwareService _hardware;
     private readonly INotificationService _notifications;
     private readonly SettingsService _settings;
@@ -32,7 +33,9 @@ public partial class IslandViewModel : ObservableObject, IDisposable
     private CancellationTokenSource? _collapseCts;
     private bool _isPointerOver;
     private readonly System.Threading.Timer _progressTimer;
+    private readonly System.Threading.Timer _periodicLocationTimer;
     private MediaInfo? _currentMedia;
+    private string? _cachedLocationName;
 
     public TimeSpan CollapseDelay { get; set; } = TimeSpan.FromMilliseconds(400);
 
@@ -138,7 +141,7 @@ public partial class IslandViewModel : ObservableObject, IDisposable
         IsNotifying ? IslandState.Notification :
         IsExpanded ? IslandState.Expanded : IslandState.Compact;
 
-    public IslandViewModel(IClockService clock, IFullscreenService fullscreen, IMediaService media, IBatteryService battery, IWeatherService weather, IUsbService usb, IVolumeService volume, IHardwareService hardware, INotificationService notifications, SettingsService settings, IDownloadService downloads)
+    public IslandViewModel(IClockService clock, IFullscreenService fullscreen, IMediaService media, IBatteryService battery, IWeatherService weather, IUsbService usb, IVolumeService volume, IBrightnessService brightness, IHardwareService hardware, INotificationService notifications, SettingsService settings, IDownloadService downloads)
     {
         _clock = clock;
         _fullscreen = fullscreen;
@@ -147,6 +150,7 @@ public partial class IslandViewModel : ObservableObject, IDisposable
         _weather = weather;
         _usb = usb;
         _volume = volume;
+        _brightness = brightness;
         _hardware = hardware;
         _notifications = notifications;
         _settings = settings;
@@ -162,11 +166,14 @@ public partial class IslandViewModel : ObservableObject, IDisposable
         _weather.WeatherChanged += OnWeatherChanged;
         _usb.UsbDeviceChanged += OnUsbDeviceChanged;
         _volume.VolumeChanged += OnVolumeChanged;
+        _brightness.BrightnessChanged += OnBrightnessChanged;
         _hardware.HardwareChanged += OnHardwareChanged;
         _notifications.NotificationReceived += OnNotificationReceived;
         _downloads.DownloadsChanged += OnDownloadsChanged;
+        _downloads.LocationUpdated += OnLocationUpdated;
 
         _progressTimer = new System.Threading.Timer(OnProgressTick, null, Timeout.Infinite, Timeout.Infinite);
+        _periodicLocationTimer = new System.Threading.Timer(OnPeriodicLocationTick, null, TimeSpan.FromMinutes(10), TimeSpan.FromMinutes(10));
         
         InitializeToggles();
     }
@@ -179,43 +186,72 @@ public partial class IslandViewModel : ObservableObject, IDisposable
         _weather.Start();
         _usb.Start();
         _volume.Start();
+        _brightness.Start();
         _hardware.Start();
         await _media.InitializeAsync();
 
         // Mostrar notificación de ubicación inicial
         _ = Task.Run(async () =>
         {
-            try
+            await FetchLocationNameAsync(_settings.Current.WeatherLatitude, _settings.Current.WeatherLongitude);
+            if (_settings.Current.WeatherShowPeriodicLocation && !string.IsNullOrEmpty(_cachedLocationName))
             {
-                var lat = _settings.Current.WeatherLatitude.ToString(System.Globalization.CultureInfo.InvariantCulture);
-                var lon = _settings.Current.WeatherLongitude.ToString(System.Globalization.CultureInfo.InvariantCulture);
-                
-                using var http = new System.Net.Http.HttpClient();
-                var url = $"https://api.bigdatacloud.net/data/reverse-geocode-client?latitude={lat}&longitude={lon}&localityLanguage=es";
-                var json = await http.GetStringAsync(url);
-                
-                using var doc = System.Text.Json.JsonDocument.Parse(json);
-                var root = doc.RootElement;
-                string locName = "";
-                
-                if (root.TryGetProperty("city", out var cityProp) && !string.IsNullOrWhiteSpace(cityProp.GetString()))
-                    locName = cityProp.GetString()!;
-                else if (root.TryGetProperty("locality", out var locProp) && !string.IsNullOrWhiteSpace(locProp.GetString()))
-                    locName = locProp.GetString()!;
-                else if (root.TryGetProperty("principalSubdivision", out var subProp) && !string.IsNullOrWhiteSpace(subProp.GetString()))
-                    locName = subProp.GetString()!;
-                
-                if (!string.IsNullOrEmpty(locName))
+                _ui.Post(_ =>
                 {
-                    _ui.Post(_ =>
-                    {
-                        var brush = (System.Windows.Media.Brush)System.Windows.Application.Current.Resources["AccentBrush"];
-                        EnqueueNotification(new NotificationRequest("location_startup", "\xE81D", locName, brush, TimeSpan.FromSeconds(2)));
-                    }, null);
-                }
+                    var brush = (System.Windows.Media.Brush)System.Windows.Application.Current.Resources["AccentBrush"];
+                    EnqueueNotification(new NotificationRequest("location", "\xE81D", _cachedLocationName, brush, TimeSpan.FromSeconds(4)));
+                }, null);
             }
-            catch { }
         });
+    }
+
+    private async void OnLocationUpdated(object? sender, (double lat, double lon) loc)
+    {
+        await FetchLocationNameAsync(loc.lat, loc.lon);
+    }
+
+    private async Task FetchLocationNameAsync(double lat, double lon)
+    {
+        try
+        {
+            using var http = new System.Net.Http.HttpClient();
+            var url = $"https://api.bigdatacloud.net/data/reverse-geocode-client?latitude={lat.ToString(System.Globalization.CultureInfo.InvariantCulture)}&longitude={lon.ToString(System.Globalization.CultureInfo.InvariantCulture)}&localityLanguage=es";
+            var json = await http.GetStringAsync(url);
+            
+            using var doc = System.Text.Json.JsonDocument.Parse(json);
+            var root = doc.RootElement;
+            string locName = "";
+            
+            if (root.TryGetProperty("city", out var cityProp) && !string.IsNullOrWhiteSpace(cityProp.GetString()))
+                locName = cityProp.GetString()!;
+            else if (root.TryGetProperty("locality", out var locProp) && !string.IsNullOrWhiteSpace(locProp.GetString()))
+                locName = locProp.GetString()!;
+            else if (root.TryGetProperty("principalSubdivision", out var subProp) && !string.IsNullOrWhiteSpace(subProp.GetString()))
+                locName = subProp.GetString()!;
+            
+            if (!string.IsNullOrEmpty(locName))
+            {
+                _cachedLocationName = locName;
+            }
+        }
+        catch { }
+    }
+
+    private void OnPeriodicLocationTick(object? state)
+    {
+        if (!_settings.Current.WeatherShowPeriodicLocation) return;
+        
+        if (!string.IsNullOrEmpty(_cachedLocationName))
+        {
+            _ui.Post(_ =>
+            {
+                if (!IsExpanded)
+                {
+                    var brush = (System.Windows.Media.Brush)System.Windows.Application.Current.Resources["AccentBrush"];
+                    EnqueueNotification(new NotificationRequest("location", "\xE81D", _cachedLocationName, brush, TimeSpan.FromSeconds(5)));
+                }
+            }, null);
+        }
     }
 
     #region Expand / collapse
@@ -674,13 +710,28 @@ public partial class IslandViewModel : ObservableObject, IDisposable
             WeatherGlyph = _weather.ConditionGlyph;
         }, null);
 
-    private void OnUsbDeviceChanged(object? sender, bool connected) =>
+    private void OnUsbDeviceChanged(object? sender, UsbDeviceEventArgs e) =>
         _ui.Post(_ =>
         {
             if (DateTime.Now < _suppressUsbNotificationsUntil) return;
-            var brush = (System.Windows.Media.Brush)System.Windows.Application.Current.Resources[connected ? "AccentBrush" : "TextSecondaryBrush"];
-            var text = connected ? "Dispositivo USB conectado" : "Dispositivo USB desconectado";
-            EnqueueNotification(new NotificationRequest("usb", "\xE88E", text, brush, TimeSpan.FromSeconds(2.5)));
+            var info = e.DeviceInfo;
+            System.Diagnostics.Debug.WriteLine($"[USB] event received: {info.FriendlyName} ({info.IsConnected})");
+            var brush = (System.Windows.Media.Brush)System.Windows.Application.Current.Resources[info.IsConnected ? "AccentBrush" : "TextSecondaryBrush"];
+            
+            string devName = info.FriendlyName;
+            
+            string text;
+            if (!info.IsConnected)
+            {
+                text = $"{devName}  Desconectado";
+            }
+            else
+            {
+                text = string.IsNullOrWhiteSpace(info.Details) ? $"{devName}  {info.Type}" : $"{devName}  {info.Details}";
+            }
+
+            System.Diagnostics.Debug.WriteLine($"[USB] Notification requested");
+            EnqueueNotification(new NotificationRequest("usb_" + info.DeviceId, info.Glyph, text, brush, TimeSpan.FromSeconds(3.5)));
         }, null);
 
     private bool _wasHasDownloads;
@@ -754,10 +805,39 @@ public partial class IslandViewModel : ObservableObject, IDisposable
     private void OnVolumeChanged(object? sender, VolumeChangedEventArgs e) =>
         _ui.Post(_ =>
         {
+            System.Diagnostics.Debug.WriteLine($"[Volume] EventBus received: {e.VolumePercent}%");
             var brush = (System.Windows.Media.Brush)System.Windows.Application.Current.Resources[e.IsMuted ? "DangerBrush" : "TextPrimaryBrush"];
-            var glyph = e.IsMuted ? "\xE74F" : (e.VolumePercent >= 50 ? "\xE995" : "\xE993");
-            var text = e.IsMuted ? "Silenciado" : $"Volumen: {Math.Round(e.VolumePercent)}%";
-            EnqueueNotification(new NotificationRequest("volume", glyph, text, brush, TimeSpan.FromSeconds(2)));
+            
+            string materialIcon = e.IsMuted || e.VolumePercent == 0 ? "VolumeOff" : 
+                                  e.VolumePercent < 50 ? "VolumeLow" : "VolumeHigh";
+
+            string devName = e.DeviceName;
+            if (devName.Length > 15) devName = devName.Substring(0, 15).Trim() + "...";
+
+            var text = e.IsMuted 
+                ? $"{devName}  Mute" 
+                : $"{devName}  {Math.Round(e.VolumePercent)}%";
+                
+            System.Diagnostics.Debug.WriteLine($"[Volume] Animation requested");
+            EnqueueNotification(new NotificationRequest("volume", "", text, brush, TimeSpan.FromSeconds(2.0), false, materialIcon));
+        }, null);
+
+    private void OnBrightnessChanged(object? sender, int percent) =>
+        _ui.Post(_ =>
+        {
+            System.Diagnostics.Debug.WriteLine($"[Brightness] EventBus received: {percent}%");
+            var brush = (System.Windows.Media.Brush)System.Windows.Application.Current.Resources["TextPrimaryBrush"];
+            
+            // Iconos dinámicos por nivel de brillo usando MahApps
+            string materialIcon = percent < 20 ? "Brightness1" : 
+                                  percent < 40 ? "Brightness3" : 
+                                  percent < 60 ? "Brightness5" : 
+                                  percent < 80 ? "Brightness6" : "Brightness7"; 
+
+            var text = $"Pantalla  {percent}%";
+                
+            System.Diagnostics.Debug.WriteLine($"[Brightness] Animation requested");
+            EnqueueNotification(new NotificationRequest("brightness", "", text, brush, TimeSpan.FromSeconds(2.0), false, materialIcon));
         }, null);
 
     private void OnHardwareChanged(object? sender, HardwareChangedEventArgs e) =>
@@ -795,9 +875,10 @@ public partial class IslandViewModel : ObservableObject, IDisposable
         _usb.UsbDeviceChanged -= OnUsbDeviceChanged;
         _volume.VolumeChanged -= OnVolumeChanged;
         _hardware.HardwareChanged -= OnHardwareChanged;
-        _notifications.NotificationReceived -= OnNotificationReceived;
+        _downloads.LocationUpdated -= OnLocationUpdated;
         CancelPendingCollapse();
         _notificationCts?.Dispose();
+        _periodicLocationTimer?.Dispose();
         _progressTimer?.Dispose();
     }
 }

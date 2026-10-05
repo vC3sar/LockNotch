@@ -41,6 +41,7 @@ public interface IDownloadService
     bool HasActiveDownloads { get; }
     DownloadEvent? GetLatestDownload();
     void Start();
+    void RequestLocationUpdate();
     event EventHandler<(double lat, double lon)>? LocationUpdated;
 }
 
@@ -49,6 +50,7 @@ public class DownloadService : IDownloadService, IDisposable
     private readonly ConcurrentDictionary<int, DownloadEvent> _activeDownloads = new();
     private CancellationTokenSource? _cts;
     private Task? _serverTask;
+    private NamedPipeServerStream? _currentPipe;
 
     public event EventHandler? DownloadsChanged;
     public event EventHandler<(double lat, double lon)>? LocationUpdated;
@@ -77,7 +79,8 @@ public class DownloadService : IDownloadService, IDisposable
                 var sid = new System.Security.Principal.SecurityIdentifier(System.Security.Principal.WellKnownSidType.BuiltinUsersSid, null);
                 pipeSecurity.AddAccessRule(new System.IO.Pipes.PipeAccessRule(sid, System.IO.Pipes.PipeAccessRights.ReadWrite, System.Security.AccessControl.AccessControlType.Allow));
 
-                using var pipeServer = System.IO.Pipes.NamedPipeServerStreamAcl.Create("LockNotchDownloadsPipe", PipeDirection.In, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous, 0, 0, pipeSecurity);
+                using var pipeServer = System.IO.Pipes.NamedPipeServerStreamAcl.Create("LockNotchDownloadsPipe", PipeDirection.InOut, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous, 0, 0, pipeSecurity);
+                _currentPipe = pipeServer;
                 
                 await pipeServer.WaitForConnectionAsync(token);
 
@@ -140,6 +143,23 @@ public class DownloadService : IDownloadService, IDisposable
                 // Delay before restarting server to avoid tight failure loops
                 await Task.Delay(1000, token);
             }
+        }
+    }
+
+    public void RequestLocationUpdate()
+    {
+        var pipe = _currentPipe;
+        if (pipe != null && pipe.IsConnected)
+        {
+            try
+            {
+                var jsonBytes = Encoding.UTF8.GetBytes("{\"type\":\"request_location\"}");
+                var lenBytes = BitConverter.GetBytes(jsonBytes.Length);
+                pipe.Write(lenBytes, 0, 4);
+                pipe.Write(jsonBytes, 0, jsonBytes.Length);
+                pipe.Flush();
+            }
+            catch { }
         }
     }
 

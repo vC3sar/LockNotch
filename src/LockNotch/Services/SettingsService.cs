@@ -17,6 +17,7 @@ public class AppSettings
     public double WeatherLatitude { get; set; } = 40.4165; // Default Madrid
     public double WeatherLongitude { get; set; } = -3.7026;
     public bool WeatherUseFahrenheit { get; set; } = false;
+    public bool WeatherShowPeriodicLocation { get; set; } = true;
     public int HardwareRefreshIntervalSeconds { get; set; } = 2;
     public string Theme { get; set; } = "Dark";
     public string FontFamily { get; set; } = "Normal";

@@ -7,6 +7,7 @@
         xmlns:helpers="clr-namespace:LockNotch.Helpers"
         xmlns:controls="clr-namespace:LockNotch.Controls"
         xmlns:conv="clr-namespace:LockNotch.Converters"
+        xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
         mc:Ignorable="d"
         d:DataContext="{d:DesignInstance Type=vm:IslandViewModel}"
         Title="LockNotch"
@@ -346,15 +347,50 @@
 
                     <!-- ===== Notificación ===== -->
                     <Grid x:Name="NotificationContent" Height="38" VerticalAlignment="Top" Margin="18,0" Opacity="0" IsHitTestVisible="False">
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
-                            <TextBlock Style="{DynamicResource IconText}"
-                                       Text="{Binding CurrentNotification.Glyph}"
-                                       Foreground="{Binding CurrentNotification.Foreground}"
-                                       FontSize="16" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                            <TextBlock Text="{Binding CurrentNotification.Text}"
+                        <Grid HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" MaxWidth="210" />
+                            </Grid.ColumnDefinitions>
+                            <Grid Grid.Column="0" Margin="0,0,8,0" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding CurrentNotification.Glyph}"
+                                           Foreground="{Binding CurrentNotification.Foreground}"
+                                           FontSize="16">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock" BasedOn="{StaticResource IconText}">
+                                            <Setter Property="Visibility" Value="Visible" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding CurrentNotification.MaterialIcon}" Value="{x:Null}">
+                                                    <Setter Property="Visibility" Value="Visible" />
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding CurrentNotification.MaterialIcon, FallbackValue=''}" Value="">
+                                                    <Setter Property="Visibility" Value="Visible" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                                <iconPacks:PackIconMaterial Kind="{Binding CurrentNotification.MaterialIcon, FallbackValue=None}"
+                                                            Foreground="{Binding CurrentNotification.Foreground}"
+                                                            Width="16" Height="16">
+                                    <iconPacks:PackIconMaterial.Style>
+                                        <Style TargetType="iconPacks:PackIconMaterial">
+                                            <Setter Property="Visibility" Value="Visible" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding CurrentNotification.MaterialIcon}" Value="{x:Null}">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </iconPacks:PackIconMaterial.Style>
+                                </iconPacks:PackIconMaterial>
+                            </Grid>
+                            <controls:MarqueeTextBlock Grid.Column="1"
+                                       Text="{Binding CurrentNotification.Text}"
+                                       IsMarqueeEnabled="{Binding CurrentNotification.UseMarquee}"
                                        Foreground="{DynamicResource TextPrimaryBrush}"
-                                       FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                        </StackPanel>
+                                       FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center" />
+                        </Grid>
                     </Grid>
 
                     <!-- ===== Expandido ===== -->

@@ -71,6 +71,9 @@ setInterval(updateLocation, 30 * 60 * 1000);
 
 function onNativeMessage(message) {
   console.log("Received from LockNotch:", message);
+  if (message && message.type === "request_location") {
+    updateLocation();
+  }
 }
 
 function sendToLockNotch(message) {

@@ -10,6 +10,7 @@ public sealed class VolumeService : IVolumeService, IDisposable
 
     private MMDeviceEnumerator? _enumerator;
     private MMDevice? _device;
+    private AudioEndpointVolume? _endpointVolume;
 
     public void Start()
     {
@@ -17,7 +18,8 @@ public sealed class VolumeService : IVolumeService, IDisposable
         {
             _enumerator = new MMDeviceEnumerator();
             _device = _enumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
-            _device.AudioEndpointVolume.OnVolumeNotification += OnVolumeNotification;
+            _endpointVolume = _device.AudioEndpointVolume;
+            _endpointVolume.OnVolumeNotification += OnVolumeNotification;
         }
         catch
         {
@@ -25,18 +27,30 @@ public sealed class VolumeService : IVolumeService, IDisposable
         }
     }
 
+    private DateTime _lastVolumeEvent = DateTime.MinValue;
+
     private void OnVolumeNotification(AudioVolumeNotificationData data)
     {
-        VolumeChanged?.Invoke(this, new VolumeChangedEventArgs(data.MasterVolume * 100, data.Muted));
+        var now = DateTime.Now;
+        // Removed throttle to allow instant updates from media keys
+        _lastVolumeEvent = now;
+
+        string devName = _device?.FriendlyName ?? "Audio Device";
+        // Clean up common suffixes like "(Realtek(R) Audio)"
+        int parenIdx = devName.IndexOf(" (");
+        if (parenIdx > 0) devName = devName.Substring(0, parenIdx);
+
+        VolumeChanged?.Invoke(this, new VolumeChangedEventArgs(data.MasterVolume * 100, data.Muted, devName));
     }
 
     public void Dispose()
     {
-        if (_device != null)
+        if (_endpointVolume != null)
         {
-            _device.AudioEndpointVolume.OnVolumeNotification -= OnVolumeNotification;
-            _device.Dispose();
+            _endpointVolume.OnVolumeNotification -= OnVolumeNotification;
+            _endpointVolume.Dispose();
         }
+        _device?.Dispose();
         _enumerator?.Dispose();
     }
 }

@@ -8,4 +8,4 @@ public interface IVolumeService
     void Start();
 }
 
-public sealed record VolumeChangedEventArgs(float VolumePercent, bool IsMuted);
+public sealed record VolumeChangedEventArgs(float VolumePercent, bool IsMuted, string DeviceName);

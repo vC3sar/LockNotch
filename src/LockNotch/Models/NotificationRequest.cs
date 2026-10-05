@@ -7,5 +7,7 @@ public sealed record NotificationRequest(
     string Glyph,
     string Text,
     System.Windows.Media.Brush Foreground,
-    TimeSpan Duration
+    TimeSpan Duration,
+    bool UseMarquee = true,
+    string? MaterialIcon = null
 );

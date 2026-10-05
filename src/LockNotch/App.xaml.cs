@@ -15,6 +15,7 @@ public partial class App : System.Windows.Application
     private WeatherService? _weather;
     private UsbService? _usb;
     private VolumeService? _volume;
+    private BrightnessService? _brightness;
     private HardwareService? _hardware;
     private NotificationService? _notifications;
     private SettingsService? _settings;
@@ -51,10 +52,11 @@ public partial class App : System.Windows.Application
         _weather = new WeatherService(_settings);
         _usb = new UsbService();
         _volume = new VolumeService();
+        _brightness = new BrightnessService();
         _hardware = new HardwareService(_settings);
         _notifications = new NotificationService();
         _downloads = new DownloadService();
-        _viewModel = new IslandViewModel(_clock, _fullscreen, _media, _battery, _weather, _usb, _volume, _hardware, _notifications, _settings, _downloads);
+        _viewModel = new IslandViewModel(_clock, _fullscreen, _media, _battery, _weather, _usb, _volume, _brightness, _hardware, _notifications, _settings, _downloads);
 
         LockNotch.Helpers.AppearanceManager.Apply(_settings.Current.Theme, _settings.Current.FontFamily);
 
@@ -117,9 +119,9 @@ public partial class App : System.Windows.Application
             }
         }
 
-        if (_settings != null)
+        if (_settings != null && _downloads != null)
         {
-            var sw = new SettingsWindow(_settings);
+            var sw = new SettingsWindow(_settings, _downloads);
             sw.Show();
         }
     }
@@ -140,6 +142,7 @@ public partial class App : System.Windows.Application
         _weather?.Dispose();
         _usb?.Dispose();
         _volume?.Dispose();
+        _brightness?.Dispose();
         _hardware?.Dispose();
         _notifications?.Dispose();
         _downloads?.Dispose();

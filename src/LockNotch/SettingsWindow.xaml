@@ -332,10 +332,16 @@
                                     <TextBox x:Name="TxtLon"/>
                                 </StackPanel>
                             </Grid>
-                            <Button Content="Auto-detectar ubicación (IP)" Style="{StaticResource SecondaryButton}" HorizontalAlignment="Left" Click="AutoDetectLocation_Click" Margin="0,0,0,8" Padding="12,6" FontSize="13"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                <Button Content="Auto-detectar ubicación (IP)" Style="{StaticResource SecondaryButton}" Click="AutoDetectLocation_Click" Padding="12,6" FontSize="13"/>
+                                <Button Content="Detección ultra precisa (Extensión Chrome)" Style="{StaticResource SecondaryButton}" Click="ExtensionLocation_Click" Margin="12,0,0,0" Padding="12,6" FontSize="13"/>
+                            </StackPanel>
 
                             <TextBlock Text="Unidades" FontSize="16" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" Margin="0,20,0,8"/>
                             <CheckBox x:Name="ChkFahrenheit" Content="Usar grados Fahrenheit (°F) en lugar de Celsius (°C)" Style="{StaticResource ToggleSwitchStyle}" Foreground="{DynamicResource SettingsText}"/>
+
+                            <TextBlock Text="Comportamiento del Notch" FontSize="16" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" Margin="0,20,0,8"/>
+                            <CheckBox x:Name="ChkShowLocation" Content="Mostrar notificación periódica con mi ubicación" Style="{StaticResource ToggleSwitchStyle}" Foreground="{DynamicResource SettingsText}"/>
 
                             <TextBlock Text="Intervalo de Refresco Hardware" FontSize="16" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" Margin="0,20,0,8"/>
                             <StackPanel Orientation="Horizontal">

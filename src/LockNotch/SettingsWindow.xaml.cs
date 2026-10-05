@@ -10,11 +10,13 @@ namespace LockNotch;
 public partial class SettingsWindow : Window
 {
     private readonly SettingsService _settings;
+    private readonly IDownloadService _downloads;
 
-    public SettingsWindow(SettingsService settings)
+    public SettingsWindow(SettingsService settings, IDownloadService downloads)
     {
         InitializeComponent();
         _settings = settings;
+        _downloads = downloads;
 
         // Cargar Apps
         TxtApp1.Text = _settings.Current.AppLauncher1;
@@ -31,6 +33,7 @@ public partial class SettingsWindow : Window
         TxtLat.Text = _settings.Current.WeatherLatitude.ToString(CultureInfo.InvariantCulture);
         TxtLon.Text = _settings.Current.WeatherLongitude.ToString(CultureInfo.InvariantCulture);
         ChkFahrenheit.IsChecked = _settings.Current.WeatherUseFahrenheit;
+        ChkShowLocation.IsChecked = _settings.Current.WeatherShowPeriodicLocation;
         TxtRefresh.Text = _settings.Current.HardwareRefreshIntervalSeconds.ToString();
 
         // Cargar Tema
@@ -112,6 +115,33 @@ public partial class SettingsWindow : Window
         }
     }
 
+    private void ExtensionLocation_Click(object sender, RoutedEventArgs e)
+    {
+        var button = (System.Windows.Controls.Button)sender;
+        string originalContent = button.Content.ToString() ?? "";
+        try
+        {
+            button.IsEnabled = false;
+            button.Content = "Solicitando...";
+            _downloads.RequestLocationUpdate();
+        }
+        catch
+        {
+            button.Content = "Error";
+        }
+        finally
+        {
+            System.Threading.Tasks.Task.Delay(1500).ContinueWith(_ =>
+            {
+                Dispatcher.Invoke(() =>
+                {
+                    button.Content = "Detección ultra precisa (Extensión Chrome)";
+                    button.IsEnabled = true;
+                });
+            });
+        }
+    }
+
     private void RepoLink_Click(object sender, MouseButtonEventArgs e)
     {
         try
@@ -146,6 +176,7 @@ public partial class SettingsWindow : Window
             _settings.Current.WeatherLongitude = lon;
 
         _settings.Current.WeatherUseFahrenheit = ChkFahrenheit.IsChecked ?? false;
+        _settings.Current.WeatherShowPeriodicLocation = ChkShowLocation.IsChecked ?? true;
 
         if (int.TryParse(TxtRefresh.Text, out int refresh) && refresh > 0)
             _settings.Current.HardwareRefreshIntervalSeconds = refresh;

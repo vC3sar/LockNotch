@@ -3,24 +3,34 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media.Animation;
 using System.Windows.Data;
+using System.Windows.Media;
 
 namespace LockNotch.Controls;
 
 public class MarqueeTextBlock : System.Windows.Controls.UserControl
 {
     private readonly TextBlock _textBlock;
-    private readonly Canvas _canvas;
+    private readonly ScrollViewer _scroll;
 
     public MarqueeTextBlock()
     {
         ClipToBounds = true;
         _textBlock = new TextBlock 
         { 
-            VerticalAlignment = VerticalAlignment.Center 
+            VerticalAlignment = VerticalAlignment.Center,
+            HorizontalAlignment = System.Windows.HorizontalAlignment.Left
         };
-        _canvas = new Canvas { ClipToBounds = true };
-        _canvas.Children.Add(_textBlock);
-        Content = _canvas;
+        _textBlock.RenderTransform = new TranslateTransform();
+
+        _scroll = new ScrollViewer 
+        { 
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Hidden,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Disabled,
+            IsHitTestVisible = false,
+            ClipToBounds = true
+        };
+        _scroll.Content = _textBlock;
+        Content = _scroll;
 
         _textBlock.SetBinding(TextBlock.TextProperty, new System.Windows.Data.Binding("Text") { Source = this });
         _textBlock.SetBinding(TextBlock.ForegroundProperty, new System.Windows.Data.Binding("Foreground") { Source = this });
@@ -41,18 +51,30 @@ public class MarqueeTextBlock : System.Windows.Controls.UserControl
     public static readonly DependencyProperty TextProperty =
         DependencyProperty.Register("Text", typeof(string), typeof(MarqueeTextBlock), new PropertyMetadata("", (d, e) => ((MarqueeTextBlock)d).UpdateAnimation()));
 
+    public bool IsMarqueeEnabled
+    {
+        get => (bool)GetValue(IsMarqueeEnabledProperty);
+        set => SetValue(IsMarqueeEnabledProperty, value);
+    }
+
+    public static readonly DependencyProperty IsMarqueeEnabledProperty =
+        DependencyProperty.Register("IsMarqueeEnabled", typeof(bool), typeof(MarqueeTextBlock), new PropertyMetadata(true, (d, e) => ((MarqueeTextBlock)d).UpdateAnimation()));
+
     private void UpdateAnimation()
     {
-        if (_textBlock == null || _canvas == null || ActualWidth == 0) return;
+        if (_textBlock == null || _scroll == null || ActualWidth == 0) return;
 
         _textBlock.Measure(new System.Windows.Size(double.PositiveInfinity, double.PositiveInfinity));
         double textWidth = _textBlock.DesiredSize.Width;
         double containerWidth = ActualWidth;
 
-        if (textWidth > containerWidth)
+        var transform = _textBlock.RenderTransform as TranslateTransform;
+        if (transform == null) return;
+
+        if (textWidth > containerWidth && IsMarqueeEnabled)
         {
             double diff = textWidth - containerWidth + 10;
-            double seconds = Math.Max(1.5, diff / 25.0);
+            double seconds = Math.Max(2.0, diff / 25.0); // Velocidad fluida
 
             var anim = new DoubleAnimation
             {
@@ -60,14 +82,15 @@ public class MarqueeTextBlock : System.Windows.Controls.UserControl
                 To = -diff,
                 Duration = TimeSpan.FromSeconds(seconds),
                 AutoReverse = true,
-                RepeatBehavior = RepeatBehavior.Forever
+                RepeatBehavior = RepeatBehavior.Forever,
+                BeginTime = TimeSpan.FromSeconds(1) // Pausa inicial antes de deslizar
             };
-            _textBlock.BeginAnimation(Canvas.LeftProperty, anim);
+            transform.BeginAnimation(TranslateTransform.XProperty, anim);
         }
         else
         {
-            _textBlock.BeginAnimation(Canvas.LeftProperty, null);
-            Canvas.SetLeft(_textBlock, 0);
+            transform.BeginAnimation(TranslateTransform.XProperty, null);
+            transform.X = 0;
         }
     }
 }
