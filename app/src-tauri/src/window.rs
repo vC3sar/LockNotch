@@ -228,8 +228,8 @@ fn detect_fullscreen() -> bool {
             y: client_rect.bottom,
         };
 
-        windows::Win32::Graphics::Gdi::ClientToScreen(hwnd, &mut top_left);
-        windows::Win32::Graphics::Gdi::ClientToScreen(hwnd, &mut bottom_right);
+        let _ = windows::Win32::Graphics::Gdi::ClientToScreen(hwnd, &mut top_left);
+        let _ = windows::Win32::Graphics::Gdi::ClientToScreen(hwnd, &mut bottom_right);
 
         // Si la ventana cubre el monitor completo es fullscreen
         top_left.x <= mi.rcMonitor.left

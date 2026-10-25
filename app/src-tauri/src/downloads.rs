@@ -55,7 +55,7 @@ pub fn start_download_pipe_server(
                 .first_pipe_instance(true)
                 .create(PIPE_NAME);
 
-            let mut server = match server_res {
+            let server = match server_res {
                 Ok(s) => s,
                 Err(_) => {
                     // Si ya existe otra instancia o falló, esperar e intentar de nuevo

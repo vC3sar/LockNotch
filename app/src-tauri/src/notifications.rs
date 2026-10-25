@@ -51,42 +51,44 @@ impl NotificationService {
 
             let handler = TypedEventHandler::<UserNotificationListener, UserNotificationChangedEventArgs>::new(
                 move |_sender: windows::core::Ref<'_, UserNotificationListener>, args: windows::core::Ref<'_, UserNotificationChangedEventArgs>| {
-                    if let Ok(kind) = args.ChangeKind() {
-                        if kind == UserNotificationChangedKind::Added {
-                            if let Ok(id) = args.UserNotificationId() {
-                                if let Ok(notif) = listener_clone.GetNotification(id) {
-                                    let mut app_name = "Windows".to_string();
-                                    if let Ok(app_info) = notif.AppInfo() {
-                                        if let Ok(disp_info) = app_info.DisplayInfo() {
-                                            if let Ok(name) = disp_info.DisplayName() {
-                                                app_name = name.to_string();
+                    if let Some(ev) = args.as_ref() {
+                        if let Ok(kind) = ev.ChangeKind() {
+                            if kind == UserNotificationChangedKind::Added {
+                                if let Ok(id) = ev.UserNotificationId() {
+                                    if let Ok(notif) = listener_clone.GetNotification(id) {
+                                        let mut app_name = "Windows".to_string();
+                                        if let Ok(app_info) = notif.AppInfo() {
+                                            if let Ok(disp_info) = app_info.DisplayInfo() {
+                                                if let Ok(name) = disp_info.DisplayName() {
+                                                    app_name = name.to_string();
+                                                }
                                             }
                                         }
-                                    }
 
-                                    if let Ok(visual) = notif.Notification().and_then(|n| n.Visual()) {
-                                        if let Ok(binding) = visual.GetBinding(&KnownNotificationBindings::ToastGeneric().unwrap_or_default()) {
-                                            if let Ok(texts) = binding.GetTextElements() {
-                                                let mut title = "".to_string();
-                                                let mut body = "".to_string();
+                                        if let Ok(visual) = notif.Notification().and_then(|n| n.Visual()) {
+                                            if let Ok(binding) = visual.GetBinding(&KnownNotificationBindings::ToastGeneric().unwrap_or_default()) {
+                                                if let Ok(texts) = binding.GetTextElements() {
+                                                    let mut title = "".to_string();
+                                                    let mut body = "".to_string();
 
-                                                if let Ok(first) = texts.GetAt(0) {
-                                                    if let Ok(t) = first.Text() {
-                                                        title = t.to_string();
+                                                    if let Ok(first) = texts.GetAt(0) {
+                                                        if let Ok(t) = first.Text() {
+                                                            title = t.to_string();
+                                                        }
                                                     }
-                                                }
-                                                if let Ok(second) = texts.GetAt(1) {
-                                                    if let Ok(b) = second.Text() {
-                                                        body = b.to_string();
+                                                    if let Ok(second) = texts.GetAt(1) {
+                                                        if let Ok(b) = second.Text() {
+                                                            body = b.to_string();
+                                                        }
                                                     }
-                                                }
 
-                                                if !title.is_empty() {
-                                                    let _ = app_clone.emit("ln:notification", WinNotification {
-                                                        app_name,
-                                                        title,
-                                                        body,
-                                                    });
+                                                    if !title.is_empty() {
+                                                        let _ = app_clone.emit("ln:notification", WinNotification {
+                                                            app_name,
+                                                            title,
+                                                            body,
+                                                        });
+                                                    }
                                                 }
                                             }
                                         }
