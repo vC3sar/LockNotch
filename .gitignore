@@ -2,3 +2,7 @@ bin/
 obj/
 .vs/
 *.user
+*node_modules*
+app/node_modules
+app/dist
+app/src-tauri/target

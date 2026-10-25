@@ -89,8 +89,12 @@ public class MarqueeTextBlock : System.Windows.Controls.UserControl
         }
         else
         {
-            transform.BeginAnimation(TranslateTransform.XProperty, null);
-            transform.X = 0;
+            // Solo reiniciamos la animación si actualmente hay una ejecutándose
+            if (transform.HasAnimatedProperties)
+            {
+                transform.BeginAnimation(TranslateTransform.XProperty, null);
+            }
+            if (transform.X != 0) transform.X = 0;
         }
     }
 }

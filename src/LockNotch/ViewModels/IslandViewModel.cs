@@ -20,8 +20,6 @@ public partial class IslandViewModel : ObservableObject, IDisposable
     private readonly IBatteryService _battery;
     private readonly IWeatherService _weather;
     private readonly IUsbService _usb;
-    private readonly IVolumeService _volume;
-    private readonly IBrightnessService _brightness;
     private readonly IHardwareService _hardware;
     private readonly INotificationService _notifications;
     private readonly SettingsService _settings;
@@ -141,7 +139,7 @@ public partial class IslandViewModel : ObservableObject, IDisposable
         IsNotifying ? IslandState.Notification :
         IsExpanded ? IslandState.Expanded : IslandState.Compact;
 
-    public IslandViewModel(IClockService clock, IFullscreenService fullscreen, IMediaService media, IBatteryService battery, IWeatherService weather, IUsbService usb, IVolumeService volume, IBrightnessService brightness, IHardwareService hardware, INotificationService notifications, SettingsService settings, IDownloadService downloads)
+    public IslandViewModel(IClockService clock, IFullscreenService fullscreen, IMediaService media, IBatteryService battery, IWeatherService weather, IUsbService usb, IHardwareService hardware, INotificationService notifications, SettingsService settings, IDownloadService downloads)
     {
         _clock = clock;
         _fullscreen = fullscreen;
@@ -149,8 +147,6 @@ public partial class IslandViewModel : ObservableObject, IDisposable
         _battery = battery;
         _weather = weather;
         _usb = usb;
-        _volume = volume;
-        _brightness = brightness;
         _hardware = hardware;
         _notifications = notifications;
         _settings = settings;
@@ -165,8 +161,6 @@ public partial class IslandViewModel : ObservableObject, IDisposable
         _battery.BatteryChanged += OnBatteryChanged;
         _weather.WeatherChanged += OnWeatherChanged;
         _usb.UsbDeviceChanged += OnUsbDeviceChanged;
-        _volume.VolumeChanged += OnVolumeChanged;
-        _brightness.BrightnessChanged += OnBrightnessChanged;
         _hardware.HardwareChanged += OnHardwareChanged;
         _notifications.NotificationReceived += OnNotificationReceived;
         _downloads.DownloadsChanged += OnDownloadsChanged;
@@ -185,8 +179,6 @@ public partial class IslandViewModel : ObservableObject, IDisposable
         _battery.Start();
         _weather.Start();
         _usb.Start();
-        _volume.Start();
-        _brightness.Start();
         _hardware.Start();
         await _media.InitializeAsync();
 
@@ -802,43 +794,6 @@ public partial class IslandViewModel : ObservableObject, IDisposable
 
         }, null);
 
-    private void OnVolumeChanged(object? sender, VolumeChangedEventArgs e) =>
-        _ui.Post(_ =>
-        {
-            System.Diagnostics.Debug.WriteLine($"[Volume] EventBus received: {e.VolumePercent}%");
-            var brush = (System.Windows.Media.Brush)System.Windows.Application.Current.Resources[e.IsMuted ? "DangerBrush" : "TextPrimaryBrush"];
-            
-            string materialIcon = e.IsMuted || e.VolumePercent == 0 ? "VolumeOff" : 
-                                  e.VolumePercent < 50 ? "VolumeLow" : "VolumeHigh";
-
-            string devName = e.DeviceName;
-            if (devName.Length > 15) devName = devName.Substring(0, 15).Trim() + "...";
-
-            var text = e.IsMuted 
-                ? $"{devName}  Mute" 
-                : $"{devName}  {Math.Round(e.VolumePercent)}%";
-                
-            System.Diagnostics.Debug.WriteLine($"[Volume] Animation requested");
-            EnqueueNotification(new NotificationRequest("volume", "", text, brush, TimeSpan.FromSeconds(2.0), false, materialIcon));
-        }, null);
-
-    private void OnBrightnessChanged(object? sender, int percent) =>
-        _ui.Post(_ =>
-        {
-            System.Diagnostics.Debug.WriteLine($"[Brightness] EventBus received: {percent}%");
-            var brush = (System.Windows.Media.Brush)System.Windows.Application.Current.Resources["TextPrimaryBrush"];
-            
-            // Iconos dinámicos por nivel de brillo usando MahApps
-            string materialIcon = percent < 20 ? "Brightness1" : 
-                                  percent < 40 ? "Brightness3" : 
-                                  percent < 60 ? "Brightness5" : 
-                                  percent < 80 ? "Brightness6" : "Brightness7"; 
-
-            var text = $"Pantalla  {percent}%";
-                
-            System.Diagnostics.Debug.WriteLine($"[Brightness] Animation requested");
-            EnqueueNotification(new NotificationRequest("brightness", "", text, brush, TimeSpan.FromSeconds(2.0), false, materialIcon));
-        }, null);
 
     private void OnHardwareChanged(object? sender, HardwareChangedEventArgs e) =>
         _ui.Post(_ =>
@@ -873,7 +828,6 @@ public partial class IslandViewModel : ObservableObject, IDisposable
         _battery.BatteryChanged -= OnBatteryChanged;
         _weather.WeatherChanged -= OnWeatherChanged;
         _usb.UsbDeviceChanged -= OnUsbDeviceChanged;
-        _volume.VolumeChanged -= OnVolumeChanged;
         _hardware.HardwareChanged -= OnHardwareChanged;
         _downloads.LocationUpdated -= OnLocationUpdated;
         CancelPendingCollapse();
