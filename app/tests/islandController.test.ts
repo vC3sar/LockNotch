@@ -18,8 +18,7 @@ describe('IslandController State Machine', () => {
   });
 
   it('respects priority: hidden > notification > expanded > compact', () => {
-    let mode = '';
-    const ctrl = new IslandController((m) => { mode = m; });
+    const ctrl = new IslandController(() => {});
 
     ctrl.pointerEntered(); // expanded
     expect(ctrl.mode).toBe('expanded');

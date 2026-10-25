@@ -50,15 +50,21 @@ pub fn start_download_pipe_server(
     running: Arc<AtomicBool>,
 ) {
     tokio::spawn(async move {
+        let mut first = true;
         while running.load(Ordering::Relaxed) {
-            let server_res = ServerOptions::new()
-                .first_pipe_instance(true)
-                .create(PIPE_NAME);
+            let mut opts = ServerOptions::new();
+            if first {
+                opts.first_pipe_instance(true);
+            }
+            let server_res = opts.create(PIPE_NAME);
 
             let server = match server_res {
-                Ok(s) => s,
+                Ok(s) => {
+                    first = false;
+                    s
+                }
                 Err(_) => {
-                    // Si ya existe otra instancia o falló, esperar e intentar de nuevo
+                    first = false;
                     tokio::time::sleep(Duration::from_millis(1000)).await;
                     continue;
                 }

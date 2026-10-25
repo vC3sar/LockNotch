@@ -30,7 +30,7 @@
         "minimizable": false,
         "closable": false,
         "focus": false,
-        "visible": false,
+        "visible": true,
         "dragDropEnabled": false
       }
     ],

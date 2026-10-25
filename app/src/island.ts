@@ -6,7 +6,7 @@ import {
   batteryGlyph,
   batteryText,
   clockParts,
-  summarizeDownloads,
+  speedText,
   gaugeFraction,
   gaugeLevel,
   notificationGlyph,
@@ -242,10 +242,17 @@ function updateCompactView() {
 
   if (hasActiveDownloads && !hasMediaPlaying) {
     compactDownloads.classList.remove('hidden');
-    const summary = summarizeDownloads(currentDownloads);
-    compactDownloadsText.textContent = summary.compactText;
-    const first = currentDownloads[0];
-    compactDownloadsSpeed.textContent = first ? `${(first.speed / 1048576).toFixed(1)} MB/s` : '';
+    if (currentDownloads.length === 1) {
+      const d = currentDownloads[0];
+      compactDownloadsText.textContent = d.state === 'complete'
+        ? `✓ ${d.filename}`
+        : (d.totalBytes > 0 ? `↓ ${d.progress}%` : `↓ ${(d.bytesReceived / 1048576).toFixed(1)} MB`);
+      compactDownloadsSpeed.textContent = d.state === 'complete' ? 'Listo' : speedText(d.speed);
+    } else {
+      compactDownloadsText.textContent = `↓ ${currentDownloads.length} descargas`;
+      const totalSpeed = currentDownloads.reduce((acc, x) => acc + (x.speed || 0), 0);
+      compactDownloadsSpeed.textContent = speedText(totalSpeed);
+    }
   } else if (hasMediaPlaying) {
     compactMedia.classList.remove('hidden');
     compactMediaTitle.textContent = currentMedia?.title || '--';

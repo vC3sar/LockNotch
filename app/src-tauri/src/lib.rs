@@ -255,13 +255,13 @@ pub fn run() {
             let running_clone = running.clone();
             downloads::start_download_pipe_server(app_handle.clone(), downloads_clone, running_clone);
 
-            let media_service = Arc::new(tokio::task::block_in_place(|| {
-                tokio::runtime::Handle::current().block_on(media::MediaService::new())
+            let media_service = Arc::new(tauri::async_runtime::block_on(async {
+                media::MediaService::new().await
             }));
             media_service.start_tracking(app_handle.clone());
 
-            let notif_service = Arc::new(tokio::task::block_in_place(|| {
-                tokio::runtime::Handle::current().block_on(notifications::NotificationService::new())
+            let notif_service = Arc::new(tauri::async_runtime::block_on(async {
+                notifications::NotificationService::new().await
             }));
             let _ = notif_service.start_listening(app_handle.clone());
 

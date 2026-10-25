@@ -13,8 +13,8 @@ use windows::Win32::UI::Shell::{SHQueryUserNotificationState, QUNS_PRESENTATION_
 use windows::Win32::UI::WindowsAndMessaging::{
     GetClientRect, GetForegroundWindow, GetWindowLongPtrW, GetWindowRect,
     RealGetWindowClassW, SetWindowLongPtrW, SetWindowPos, GWL_EXSTYLE, HWND_TOPMOST,
-    SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, WS_EX_APPWINDOW, WS_EX_NOACTIVATE,
-    WS_EX_TOOLWINDOW, WS_EX_TRANSPARENT,
+    SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, SWP_SHOWWINDOW, SWP_FRAMECHANGED,
+    WS_EX_APPWINDOW, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_EX_TRANSPARENT,
 };
 
 pub struct WindowManager {
@@ -83,7 +83,7 @@ impl WindowManager {
                     y,
                     0,
                     0,
-                    SWP_NOSIZE | SWP_NOACTIVATE,
+                    SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW,
                 );
             }
         }

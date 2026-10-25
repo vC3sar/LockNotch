@@ -16,7 +16,7 @@ describe('NotificationQueue', () => {
     });
 
     expect(current).not.toBeNull();
-    expect(current?.text).toBe('Batería 80%');
+    expect((current as NotificationRequest | null)?.text).toBe('Batería 80%');
 
     // Live update same id
     q.enqueue({
@@ -27,7 +27,7 @@ describe('NotificationQueue', () => {
       durationMs: 3000
     });
 
-    expect(current?.text).toBe('Batería 81%');
+    expect((current as NotificationRequest | null)?.text).toBe('Batería 81%');
 
     // Dismiss
     q.dismiss();
